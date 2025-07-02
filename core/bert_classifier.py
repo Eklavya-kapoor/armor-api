@@ -1,34 +1,45 @@
+import os
 import torch
-from transformers import BertTokenizer, BertForSequenceClassification
-import numpy as np
-from typing import Tuple, Dict
 import logging
+import numpy as np
+from transformers import BertTokenizer, BertForSequenceClassification
+from typing import Tuple
 
 class BertScamClassifier:
-    def __init__(self, model_path: str = "scambert-model-v2"):
-        """Initialize BERT classifier with trained model"""
+    def __init__(self, model_path: str = "elephasai/elephas"):
+        """
+        Initialize BERT classifier using Hugging Face-hosted model.
+        Set HF_TOKEN in your .env or Render environment.
+        """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model_path = model_path
         self.model = None
         self.tokenizer = None
+        self.hf_token = os.getenv("HF_TOKEN")
         self.load_model()
-        
+
     def load_model(self):
-        """Load the trained BERT model and tokenizer"""
+        """Load the tokenizer and model from Hugging Face"""
         try:
-            self.tokenizer = BertTokenizer.from_pretrained(self.model_path)
-            self.model = BertForSequenceClassification.from_pretrained(self.model_path)
+            self.tokenizer = BertTokenizer.from_pretrained(
+                self.model_path, use_auth_token=self.hf_token
+            )
+            self.model = BertForSequenceClassification.from_pretrained(
+                self.model_path, use_auth_token=self.hf_token
+            )
             self.model.to(self.device)
             self.model.eval()
             logging.info(f"✅ BERT model loaded from {self.model_path}")
         except Exception as e:
             logging.error(f"❌ Failed to load BERT model: {e}")
-            # Fallback to pre-trained model
+            # Optional fallback (can remove in production)
             self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-            self.model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=2)
+            self.model = BertForSequenceClassification.from_pretrained(
+                "bert-base-uncased", num_labels=2
+            )
             self.model.to(self.device)
             self.model.eval()
-            
+
     def predict(self, text: str) -> Tuple[float, float]:
         """
         Predict scam probability for given text
@@ -36,8 +47,7 @@ class BertScamClassifier:
         """
         if not self.model or not self.tokenizer:
             return 0.5, 0.0
-            
-        # Tokenize input
+
         inputs = self.tokenizer(
             text,
             truncation=True,
@@ -45,17 +55,13 @@ class BertScamClassifier:
             max_length=128,
             return_tensors="pt"
         )
-        
-        # Move to device
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        
-        # Get prediction
+
         with torch.no_grad():
             outputs = self.model(**inputs)
             probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
-            
-        # Extract scam probability (class 1) and confidence
-        scam_prob = probabilities[0][1].item()
+
+        scam_prob = probabilities[0][1].item()  # class 1 = scam
         confidence = torch.max(probabilities[0]).item()
-        
+
         return scam_prob, confidence

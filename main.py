@@ -4,6 +4,8 @@ import asyncio
 import logging
 import signal
 import sys
+from dotenv import load_dotenv
+load_dotenv()
 from typing import Dict
 
 from core.bert_classifier import BertScamClassifier
