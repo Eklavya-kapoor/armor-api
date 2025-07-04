@@ -8,25 +8,33 @@ from typing import Tuple
 class BertScamClassifier:
     def __init__(self, model_path: str = "elephasai/elephas"):
         """
-        Initialize BERT classifier using a public Hugging Face-hosted model.
+        Initialize BERT classifier using a private Hugging Face-hosted model.
+        Requires HF_TOKEN as environment variable.
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model_path = model_path
+        self.hf_token = os.getenv("HF_TOKEN")  # ✅ Ensure it's set in Render
         self.model = None
         self.tokenizer = None
         self.load_model()
 
     def load_model(self):
-        """Load tokenizer and model from Hugging Face"""
+        """Load tokenizer and model from Hugging Face using auth token"""
         try:
-            self.tokenizer = BertTokenizer.from_pretrained(self.model_path)
-            self.model = BertForSequenceClassification.from_pretrained(self.model_path)
+            self.tokenizer = BertTokenizer.from_pretrained(
+                self.model_path,
+                token=self.hf_token  # ✅ Use new token arg
+            )
+            self.model = BertForSequenceClassification.from_pretrained(
+                self.model_path,
+                token=self.hf_token
+            )
             self.model.to(self.device)
             self.model.eval()
             logging.info(f"✅ BERT model loaded from {self.model_path}")
         except Exception as e:
             logging.error(f"❌ Failed to load BERT model: {e}")
-            # Optional fallback (dev only)
+            # Optional fallback
             self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
             self.model = BertForSequenceClassification.from_pretrained(
                 "bert-base-uncased", num_labels=2
