@@ -13,10 +13,9 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: MODEL_PATH
-        value: unitary/toxic-bert  # Free public model - no HF_TOKEN needed
-      # Comment out HF_TOKEN for free deployment
-      # - key: HF_TOKEN
-      #   sync: false
+        value: elephasai/elephas  # Your private model
+      - key: HF_TOKEN
+        sync: false  # Set this manually in Render dashboard for security
       - key: LOG_LEVEL
         value: INFO
       - key: API_TITLE
@@ -29,6 +28,17 @@ services:
         value: /opt/render/project/src
       - key: PORT
         value: "8000"
+      # Memory optimization environment variables for free tier
+      - key: TRANSFORMERS_CACHE
+        value: /tmp/transformers_cache
+      - key: TORCH_HOME
+        value: /tmp/torch
+      - key: HF_HOME
+        value: /tmp/huggingface
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: TOKENIZERS_PARALLELISM
+        value: "false"
     disk:
       name: elephas-ai-disk
       mountPath: /opt/render/project/data

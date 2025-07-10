@@ -1,22 +1,10 @@
-# 🐘 Elephas AI - Private Model Deployment Guide
+# 🆓 Deploy Your Private Model on Render Free Tier
 
-## 🔐 Private Hugging Face Model Setup
+## Strategy: Memory Optimization for 512MB Limit
 
-Your Elephas AI uses a private model on Hugging Face (`elephasai/elephas`). Here's how to deploy it correctly on Render:
+Your private model `elephasai/elephas` can work on Render's free tier! Here's how to optimize it:
 
-### Step 1: Get Your Hugging Face Token
-1. Go to [Hugging Face Settings](https://huggingface.co/settings/tokens)
-2. Create a new token with `Read` permissions
-3. Copy the token (starts with `hf_...`)
-
-### Step 2: Deploy to Render
-
-#### Option A: Via GitHub (Recommended)
-1. **Fix Git Issues First:**
-   ```bash
-   # Set git config
-   git config --global user.email "eklavyakapoor2824@gmail.com"
-   git config --global user.name "Eklavya Kapoor"
+### Option 1: Memory-Optimized BERT Classifier
    
    # Fix the repository sync
    git pull origin main --allow-unrelated-histories
