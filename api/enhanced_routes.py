@@ -148,15 +148,31 @@ app.add_middleware(
 
 # 🏠 Serve dashboard static files
 dashboard_path = os.path.join(os.path.dirname(__file__), "..", "..", "elephas-ai-sdk", "dashboard")
-if os.path.exists(dashboard_path):
-    app.mount("/dashboard", StaticFiles(directory=dashboard_path), name="dashboard")
+# Try multiple possible dashboard paths for different deployment environments
+possible_dashboard_paths = [
+    dashboard_path,
+    os.path.join(os.path.dirname(__file__), "..", "dashboard"),
+    os.path.join(os.getcwd(), "dashboard"),
+    os.path.join(os.getcwd(), "elephas-ai-sdk", "dashboard"),
+    "/opt/render/project/src/elephas-ai-sdk/dashboard"
+]
+
+actual_dashboard_path = None
+for path in possible_dashboard_paths:
+    if os.path.exists(path):
+        actual_dashboard_path = path
+        break
+
+if actual_dashboard_path:
+    app.mount("/dashboard", StaticFiles(directory=actual_dashboard_path), name="dashboard")
 
 # 📱 Dashboard route
 @app.get("/")
 async def dashboard():
-    dashboard_file = os.path.join(dashboard_path, "index.html")
-    if os.path.exists(dashboard_file):
-        return FileResponse(dashboard_file)
+    if actual_dashboard_path:
+        dashboard_file = os.path.join(actual_dashboard_path, "index.html")
+        if os.path.exists(dashboard_file):
+            return FileResponse(dashboard_file)
     return {"message": "Elephas AI Dashboard - API is running"}
 
 # 🖼️ Serve logo files directly
@@ -185,6 +201,39 @@ async def health():
         "environment": os.getenv("ENVIRONMENT", "development"),
         "database": "optional",
         "cache": "optional"
+    }
+
+# 🧪 Simple test endpoint without AI initialization
+@app.post("/test-scan")
+async def test_scan_simple(body: ScanRequest):
+    """Simple scan endpoint that doesn't require AI - for testing"""
+    start_time = time.time()
+    
+    message = body.text.strip()
+    sender = body.sender or ""
+    
+    # Simple keyword-based detection (no AI required)
+    suspicious_keywords = ['urgent', 'click here', 'verify', 'suspended', 'winner', 'congratulations']
+    message_lower = message.lower()
+    found_keywords = [kw for kw in suspicious_keywords if kw in message_lower]
+    
+    risk_score = min(len(found_keywords) * 0.3, 0.9)
+    risk_level = "high" if risk_score >= 0.6 else "medium" if risk_score >= 0.3 else "low"
+    
+    processing_time = round((time.time() - start_time) * 1000, 2)
+    
+    return {
+        "scan_id": f"test_{int(time.time())}_{random.randint(1000, 9999)}",
+        "risk_score": round(risk_score, 3),
+        "risk_level": risk_level,
+        "classification": "test_scan",
+        "confidence": 0.75,
+        "found_keywords": found_keywords,
+        "explanation": f"Simple test scan found {len(found_keywords)} suspicious keywords",
+        "processing_time": processing_time,
+        "timestamp": datetime.now().isoformat(),
+        "model_version": "Test-v1.0",
+        "note": "This is a simple test endpoint without AI initialization"
     }
 
 # 📊 Real-time Dashboard API endpoints using database
