@@ -174,25 +174,46 @@ class ElephasAIOrchestrator:
 if __name__ == "__main__":
     # Temporary: Use simple test server for debugging port issues
     if os.getenv("ENVIRONMENT") == "production":
-        print("🧪 Starting in test mode for production debugging...")
-        import uvicorn
-        from fastapi import FastAPI
+        print("🧪 DEBUG: Starting in test mode for production debugging...")
+        print(f"🧪 DEBUG: PORT environment variable = {os.getenv('PORT', 'NOT_SET')}")
+        print(f"🧪 DEBUG: ENVIRONMENT = {os.getenv('ENVIRONMENT', 'NOT_SET')}")
         
-        test_app = FastAPI(title="Elephas AI Test")
-        
-        @test_app.get("/")
-        async def root():
-            return {"message": "Elephas AI Test Server", "status": "running"}
+        try:
+            import uvicorn
+            from fastapi import FastAPI
             
-        @test_app.get("/health") 
-        async def health():
-            return {"status": "ok", "message": "Test health check"}
-        
-        port = int(os.getenv("PORT", 8000))
-        print(f"🚀 Starting test server on port {port}")
-        uvicorn.run(test_app, host="0.0.0.0", port=port, log_level="info")
+            print("🧪 DEBUG: FastAPI and uvicorn imported successfully")
+            
+            test_app = FastAPI(title="Elephas AI Test")
+            
+            @test_app.get("/")
+            async def root():
+                return {"message": "Elephas AI Test Server", "status": "running"}
+                
+            @test_app.get("/health") 
+            async def health():
+                return {"status": "ok", "message": "Test health check"}
+            
+            port = int(os.getenv("PORT", 8000))
+            print(f"🚀 DEBUG: Starting test server on port {port}")
+            
+            # Start server with explicit configuration
+            uvicorn.run(
+                test_app, 
+                host="0.0.0.0", 
+                port=port, 
+                log_level="info",
+                access_log=True
+            )
+            
+        except Exception as e:
+            print(f"❌ ERROR: Failed to start test server: {e}")
+            import traceback
+            traceback.print_exc()
+            
     else:
         # Local development - use full orchestrator
+        print("🏠 DEBUG: Starting in local development mode")
         orchestrator = ElephasAIOrchestrator()
         mode = os.getenv("DEPLOYMENT_MODE", "full")
         asyncio.run(orchestrator.start(mode=mode))
