@@ -181,24 +181,27 @@ app.add_middleware(
 )
 
 # 🏠 Serve dashboard static files
-dashboard_path = os.path.join(os.path.dirname(__file__), "..", "..", "elephas-ai-sdk", "dashboard")
+dashboard_path = os.path.join(os.path.dirname(__file__), "..", "dashboard")
 # Try multiple possible dashboard paths for different deployment environments
 possible_dashboard_paths = [
     dashboard_path,
-    os.path.join(os.path.dirname(__file__), "..", "dashboard"),
+    os.path.join(os.path.dirname(__file__), "..", "..", "dashboard"),
     os.path.join(os.getcwd(), "dashboard"),
-    os.path.join(os.getcwd(), "elephas-ai-sdk", "dashboard"),
-    "/opt/render/project/src/elephas-ai-sdk/dashboard"
+    "/opt/render/project/src/dashboard"
 ]
 
 actual_dashboard_path = None
 for path in possible_dashboard_paths:
     if os.path.exists(path):
         actual_dashboard_path = path
+        logger.info(f"✅ Dashboard found at: {path}")
         break
 
 if actual_dashboard_path:
-    app.mount("/dashboard", StaticFiles(directory=actual_dashboard_path), name="dashboard")
+    app.mount("/static", StaticFiles(directory=actual_dashboard_path), name="static")
+    logger.info(f"📁 Dashboard mounted at /static from {actual_dashboard_path}")
+else:
+    logger.warning("⚠️ Dashboard files not found")
 
 # 📱 Dashboard route
 @app.get("/")
@@ -207,7 +210,48 @@ async def dashboard():
         dashboard_file = os.path.join(actual_dashboard_path, "index.html")
         if os.path.exists(dashboard_file):
             return FileResponse(dashboard_file)
-    return {"message": "Elephas AI Dashboard - API is running"}
+    return {"message": "Elephas AI Dashboard - API is running", "dashboard_available": actual_dashboard_path is not None}
+
+# 📊 Dashboard page routes
+@app.get("/analytics")
+async def analytics_page():
+    if actual_dashboard_path:
+        analytics_file = os.path.join(actual_dashboard_path, "analytics.html")
+        if os.path.exists(analytics_file):
+            return FileResponse(analytics_file)
+    return {"error": "Analytics page not found"}
+
+@app.get("/reports")
+async def reports_page():
+    if actual_dashboard_path:
+        reports_file = os.path.join(actual_dashboard_path, "reports.html")
+        if os.path.exists(reports_file):
+            return FileResponse(reports_file)
+    return {"error": "Reports page not found"}
+
+@app.get("/settings")
+async def settings_page():
+    if actual_dashboard_path:
+        settings_file = os.path.join(actual_dashboard_path, "settings.html")
+        if os.path.exists(settings_file):
+            return FileResponse(settings_file)
+    return {"error": "Settings page not found"}
+
+@app.get("/threat-detection")
+async def threat_detection_page():
+    if actual_dashboard_path:
+        threat_file = os.path.join(actual_dashboard_path, "threat-detection.html")
+        if os.path.exists(threat_file):
+            return FileResponse(threat_file)
+    return {"error": "Threat detection page not found"}
+
+@app.get("/user-management")
+async def user_management_page():
+    if actual_dashboard_path:
+        user_file = os.path.join(actual_dashboard_path, "user-management.html")
+        if os.path.exists(user_file):
+            return FileResponse(user_file)
+    return {"error": "User management page not found"}
 
 # 🖼️ Serve logo files directly
 logo_path = "/Users/eklavya/Documents/scamshield_flutter_app/assets/images/elephas_logo.png"
