@@ -6,13 +6,13 @@ from transformers import BertTokenizer, BertForSequenceClassification
 from typing import Tuple
 
 class BertScamClassifier:
-    def __init__(self, model_path: str = "elephasai/elephas"):
+    def __init__(self, model_path: str = None):
         """
         Initialize BERT classifier using a private Hugging Face-hosted model.
         Requires HF_TOKEN as environment variable.
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model_path = model_path
+        self.model_path = model_path or os.getenv("MODEL_PATH", "elephasai/elephas")
         self.hf_token = os.getenv("HF_TOKEN")  # ✅ Ensure it's set in Render
         self.model = None
         self.tokenizer = None

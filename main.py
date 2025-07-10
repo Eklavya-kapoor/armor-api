@@ -4,6 +4,7 @@ import asyncio
 import logging
 import signal
 import sys
+import os
 from dotenv import load_dotenv
 load_dotenv()
 from typing import Dict
@@ -119,7 +120,8 @@ class ElephasAIOrchestrator:
     async def _start_api_server(self):
         """Run the FastAPI server only."""
         self.logger.info("🌐 Starting API server...")
-        config = uvicorn.Config(app=app, host="0.0.0.0", port=8000, log_level="info", loop="asyncio")
+        port = int(os.getenv("PORT", 8000))
+        config = uvicorn.Config(app=app, host="0.0.0.0", port=port, log_level="info", loop="asyncio")
         server = uvicorn.Server(config)
         await server.serve()
 

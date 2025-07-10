@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: python main.py
     healthCheckPath: /health
     domains:
       - elephas-ai-api.onrender.com
@@ -13,7 +13,9 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: MODEL_PATH
-        value: ./scambert-model-v2
+        value: elephasai/elephas
+      - key: HF_TOKEN
+        sync: false  # Set this manually in Render dashboard for security
       - key: LOG_LEVEL
         value: INFO
       - key: API_TITLE
@@ -22,6 +24,10 @@ services:
         value: v2.0
       - key: API_DESCRIPTION
         value: Advanced AI-powered threat detection and security analysis
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+      - key: PORT
+        value: "8000"
     disk:
       name: elephas-ai-disk
       mountPath: /opt/render/project/data
