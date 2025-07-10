@@ -13,9 +13,10 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: MODEL_PATH
-        value: elephasai/elephas
-      - key: HF_TOKEN
-        sync: false  # Set this manually in Render dashboard for security
+        value: unitary/toxic-bert  # Free public model - no HF_TOKEN needed
+      # Comment out HF_TOKEN for free deployment
+      # - key: HF_TOKEN
+      #   sync: false
       - key: LOG_LEVEL
         value: INFO
       - key: API_TITLE
