@@ -1,9 +1,10 @@
 # api/enhanced_routes.py
 
-from fastapi import APIRouter, FastAPI, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, FastAPI, HTTPException, Depends, BackgroundTasks, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional, Dict, List
 import os
@@ -26,9 +27,55 @@ from core.bert_classifier import BertScamClassifier
 from core.advanced_features import AdvancedScamFeatureExtractor
 from core.enhanced_scorer import EnhancedScamRiskScorer
 
+# Import enterprise authentication
+from core.auth_system import auth_system, APIKey
+
 # Configure logging first
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Security scheme for API key authentication
+security = HTTPBearer(auto_error=False)
+
+# Authentication dependency
+async def get_api_key(request: Request, authorization: HTTPAuthorizationCredentials = Depends(security)) -> Optional[APIKey]:
+    """Get and validate API key from Authorization header (optional for some endpoints)"""
+    if not authorization or not authorization.credentials:
+        return None
+    
+    api_key = auth_system.validate_api_key(authorization.credentials)
+    if not api_key:
+        return None
+    
+    # Check rate limits
+    rate_limit_info = auth_system.check_rate_limit(api_key)
+    if not rate_limit_info["allowed"]:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"Rate limit exceeded: {rate_limit_info.get('error', 'Unknown error')}"
+        )
+    
+    return api_key
+
+# Required authentication dependency
+async def require_api_key(request: Request, authorization: HTTPAuthorizationCredentials = Depends(security)) -> APIKey:
+    """Require valid API key for protected endpoints"""
+    if not authorization or not authorization.credentials:
+        raise HTTPException(status_code=401, detail="API key required. Get your key at /enterprise/create-api-key")
+    
+    api_key = auth_system.validate_api_key(authorization.credentials)
+    if not api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    # Check rate limits
+    rate_limit_info = auth_system.check_rate_limit(api_key)
+    if not rate_limit_info["allowed"]:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"Rate limit exceeded: {rate_limit_info.get('error', 'Unknown error')}"
+        )
+    
+    return api_key
 
 # Initialize AI components globally
 AI_COMPONENTS = {
@@ -200,6 +247,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include enterprise routes
+from api.enterprise_routes import enterprise_router
+app.include_router(enterprise_router)
+
 # Background AI initialization
 @app.on_event("startup")
 async def startup_event():
@@ -222,14 +273,14 @@ async def startup_event():
     thread.start()
     logger.info("🔄 AI initialization started in background")
 
-# 🏠 Serve dashboard static files
-dashboard_path = os.path.join(os.path.dirname(__file__), "..", "dashboard")
+# 🏠 Serve dashboard static files from SDK folder
+dashboard_path = os.path.join(os.path.dirname(__file__), "..", "..", "elephas-ai-sdk", "dashboard")
 # Try multiple possible dashboard paths for different deployment environments
 possible_dashboard_paths = [
     dashboard_path,
-    os.path.join(os.path.dirname(__file__), "..", "..", "dashboard"),
-    os.path.join(os.getcwd(), "dashboard"),
-    "/opt/render/project/src/dashboard"
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "elephas-ai-sdk", "dashboard"),
+    os.path.join(os.getcwd(), "..", "elephas-ai-sdk", "dashboard"),
+    "/Users/eklavya/Desktop/elephas-ai-sdk/dashboard"
 ]
 
 actual_dashboard_path = None
@@ -514,8 +565,16 @@ async def get_threat_data():
 
 # 🐘 POST endpoint for REAL scam detection using Elephas AI
 @app.post("/scan")
-async def scan_message(body: ScanRequest):
-    """Scan message using real Elephas AI and advanced detection algorithms"""
+async def scan_message(
+    body: ScanRequest, 
+    request: Request,
+    api_key: Optional[APIKey] = Depends(get_api_key)
+):
+    """Scan message using real Elephas AI and advanced detection algorithms
+    
+    Supports both authenticated (with API key) and public access.
+    Authenticated users get higher rate limits and detailed analytics.
+    """
     start_time = time.time()
     
     try:
@@ -524,24 +583,52 @@ async def scan_message(body: ScanRequest):
         metadata = body.metadata or {}
 
         if len(message) < 3:
-            return {
+            result = {
                 "error": "Message too short to analyze.",
                 "risk_score": 0.0,
                 "risk_level": "low",
                 "explanation": "Not enough information for analysis",
                 "processing_time": round((time.time() - start_time) * 1000, 2)
             }
+            
+            # Log usage if authenticated
+            if api_key:
+                auth_system.log_usage(
+                    api_key=api_key,
+                    endpoint="/scan",
+                    response_time_ms=result["processing_time"],
+                    risk_score=0.0,
+                    classification="error",
+                    ip_address=request.client.host,
+                    user_agent=request.headers.get("user-agent", "unknown")
+                )
+            
+            return result
 
         # Check if AI components are initialized
         if not AI_COMPONENTS['initialized']:
             # Check if initialization has permanently failed
             if AI_COMPONENTS['initialization_failed']:
                 logger.debug("Using fallback detection - AI initialization permanently failed (upgrade to Premium tier or Google Cloud Run needed)")
-                return await _fallback_scan(message, sender, start_time)
+                result = await _fallback_scan(message, sender, start_time)
+            else:
+                # Don't block the request - immediately use fallback
+                logger.info("AI components not yet initialized - using fallback detection")
+                result = await _fallback_scan(message, sender, start_time)
             
-            # Don't block the request - immediately use fallback
-            logger.info("AI components not yet initialized - using fallback detection")
-            return await _fallback_scan(message, sender, start_time)
+            # Log usage if authenticated
+            if api_key:
+                auth_system.log_usage(
+                    api_key=api_key,
+                    endpoint="/scan",
+                    response_time_ms=result["processing_time"],
+                    risk_score=result["risk_score"],
+                    classification=result["classification"],
+                    ip_address=request.client.host,
+                    user_agent=request.headers.get("user-agent", "unknown")
+                )
+            
+            return result
 
         try:
             # Extract advanced features using the feature extractor
@@ -614,6 +701,19 @@ async def scan_message(body: ScanRequest):
                 ]
             
             logger.info(f"Scan completed: {classification} (score: {risk_score:.3f}, time: {processing_time}ms)")
+            
+            # Log usage if authenticated
+            if api_key:
+                auth_system.log_usage(
+                    api_key=api_key,
+                    endpoint="/scan",
+                    response_time_ms=processing_time,
+                    risk_score=risk_score,
+                    classification=classification,
+                    ip_address=request.client.host,
+                    user_agent=request.headers.get("user-agent", "unknown")
+                )
+            
             return response
             
         except Exception as ai_error:
