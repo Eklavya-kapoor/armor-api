@@ -8,131 +8,72 @@ from typing import Tuple
 class BertScamClassifier:
     def __init__(self, model_path: str = None):
         """
-        Initialize BERT classifier using a private Hugging Face-hosted model.
+        Initialize BERT classifier using a public Hugging Face model.
         Optimized for Render free tier (512MB RAM limit).
-        Requires HF_TOKEN as environment variable.
+        No authentication required for public model.
         """
-        # Memory optimization: Force CPU usage for free tier
         self.device = torch.device("cpu")  # CPU only for memory efficiency
         self.model_path = model_path or os.getenv("MODEL_PATH", "elephasai/elephas")
-        self.hf_token = os.getenv("HF_TOKEN")  # ✅ Ensure it's set in Render
         self.model = None
         self.tokenizer = None
-        
-        print(f"🔐 Initializing BERT classifier for private model: {self.model_path}")
+        print(f"🌍 Initializing BERT classifier for public model: {self.model_path}")
         print(f"💾 Memory optimization enabled for free tier")
-        
-        # Check HF_TOKEN before attempting to load
-        if not self.hf_token:
-            raise Exception("HF_TOKEN environment variable not set - cannot access private model")
-        
         self.load_model()
 
     def load_model(self):
-        """Load tokenizer and model from Hugging Face using auth token with memory optimization"""
+        """Load tokenizer and model from Hugging Face (public model, no token)"""
         try:
-            # Check if HF_TOKEN is available
-            if not self.hf_token:
-                print("❌ HF_TOKEN not found! Cannot load private model.")
-                print("🔄 Falling back to public model...")
-                self._load_fallback_model()
-                return
-            
             print(f"📦 Loading tokenizer from {self.model_path}...")
-            
-            # Remove signal-based timeout (causes issues in background threads)
-            # Instead, rely on transformers library's own timeout mechanisms
-            try:
-                self.tokenizer = BertTokenizer.from_pretrained(
-                    self.model_path,
-                    token=self.hf_token,  # ✅ Use new token arg
-                    cache_dir="/tmp/transformers_cache"  # Use temp directory
-                )
-                
-                print(f"🧠 Loading model from {self.model_path} (memory optimized)...")
-                self.model = BertForSequenceClassification.from_pretrained(
-                    self.model_path,
-                    token=self.hf_token,
-                    cache_dir="/tmp/transformers_cache",
-                    torch_dtype=torch.float16,  # Half precision (50% memory reduction)
-                    low_cpu_mem_usage=True,     # Enable memory optimization
-                    device_map="auto"           # Automatic device placement
-                )
-                
-                # Move to CPU and set eval mode for memory efficiency
-                self.model.to(self.device)
-                self.model.eval()
-                
-            except Exception as loading_error:
-                print(f"⚠️ Model loading failed: {loading_error}")
-                print("🔄 Using fallback model...")
-                self._load_fallback_model()
-                return
-            
-            # Force garbage collection to free memory
-            import gc
-            gc.collect()
-            
+            os.environ["TOKENIZERS_PARALLELISM"] = "false"
+            os.environ["OMP_NUM_THREADS"] = "1"
+            self.tokenizer = BertTokenizer.from_pretrained(
+                self.model_path,
+                cache_dir="/tmp/transformers_cache",
+                local_files_only=False
+            )
+            print(f"🧠 Loading model from {self.model_path} (memory optimized)...")
+            self.model = BertForSequenceClassification.from_pretrained(
+                self.model_path,
+                cache_dir="/tmp/transformers_cache",
+                torch_dtype=torch.float16,
+                low_cpu_mem_usage=True,
+                device_map="auto",
+                local_files_only=False
+            )
+            self.model.to(self.device)
+            self.model.eval()
             print(f"✅ BERT model loaded successfully from {self.model_path}")
             print(f"💾 Running on {self.device} with memory optimizations")
-            
         except Exception as e:
-            print(f"❌ Failed to load private model: {e}")
-            
-            # In production, don't allow fallback to public models for security
-            if os.getenv("ENVIRONMENT") == "production" and os.getenv("FORCE_PRIVATE_MODEL") == "true":
-                print("🚫 Production mode: No fallback allowed, only private model permitted")
-                raise Exception(f"Production deployment requires private model: {e}")
-            
-            print("🔄 Falling back to public model...")
+            print(f"❌ Failed to load public model: {e}")
+            print("🔄 Falling back to basic BERT model...")
             self._load_fallback_model()
 
     def _load_fallback_model(self):
-        """Load a public model as fallback when private model fails"""
-        # In production, prevent fallback if configured to force private model
-        if os.getenv("ENVIRONMENT") == "production" and os.getenv("FORCE_PRIVATE_MODEL") == "true":
-            raise Exception("Production deployment configured to only use private model")
-        
+        """Load a basic public model as fallback if main model fails"""
+        fallback_model = "bert-base-uncased"
         try:
-            # Use a fine-tuned model for better scam detection
-            fallback_model = "unitary/toxic-bert"  # Pre-trained for toxic/harmful content
-            
             print(f"📦 Loading fallback tokenizer: {fallback_model}")
             self.tokenizer = BertTokenizer.from_pretrained(
                 fallback_model,
-                cache_dir="/tmp/transformers_cache"
+                cache_dir="/tmp/transformers_cache",
+                local_files_only=False
             )
-            
             print(f"🧠 Loading fallback model: {fallback_model}")
             self.model = BertForSequenceClassification.from_pretrained(
-                fallback_model, 
-                cache_dir="/tmp/transformers_cache",
-                torch_dtype=torch.float16,
-                low_cpu_mem_usage=True
-            )
-            self.model.to(self.device)
-            self.model.eval()
-            
-            print(f"✅ Fallback model loaded: {fallback_model}")
-            print("🔍 Still using BERT AI - just public model instead of private")
-            
-        except Exception as e:
-            print(f"❌ Even fallback model failed: {e}")
-            # Ultimate fallback - basic BERT
-            self.tokenizer = BertTokenizer.from_pretrained(
-                "bert-base-uncased",
-                cache_dir="/tmp/transformers_cache"
-            )
-            self.model = BertForSequenceClassification.from_pretrained(
-                "bert-base-uncased", 
+                fallback_model,
                 num_labels=2,
                 cache_dir="/tmp/transformers_cache",
                 torch_dtype=torch.float16,
-                low_cpu_mem_usage=True
+                low_cpu_mem_usage=True,
+                local_files_only=False
             )
             self.model.to(self.device)
             self.model.eval()
-            print("✅ Basic BERT model loaded as final fallback")
+            print("✅ Basic BERT model loaded as fallback")
+        except Exception as e:
+            print(f"❌ Even fallback model failed: {e}")
+            raise Exception("All fallback models failed to load")
 
     def predict(self, text: str) -> Tuple[float, float]:
         """

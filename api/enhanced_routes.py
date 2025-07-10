@@ -107,32 +107,72 @@ def initialize_ai_components():
     try:
         logger.info("🐘 Initializing Elephas AI components...")
         
-        # Check if HF_TOKEN is available
-        hf_token = os.getenv("HF_TOKEN")
-        if not hf_token:
-            logger.error("❌ HF_TOKEN not found - cannot load private model")
-            AI_COMPONENTS['initialization_failed'] = True
-            raise Exception("Missing HF_TOKEN for private model access")
+        # Initialize components with timeout protection
+        import threading
+        import queue
         
-        # Initialize components directly in main thread (avoid signal issues)
-        logger.info("🔧 Initializing BERT classifier (main thread)...")
-        AI_COMPONENTS['bert_classifier'] = BertScamClassifier()
+        def _init_worker():
+            """Worker function to initialize AI in separate thread"""
+            try:
+                logger.info("🔧 Initializing BERT classifier...")
+                bert = BertScamClassifier()
+                
+                logger.info("🔧 Initializing feature extractor...")
+                features = AdvancedScamFeatureExtractor()
+                
+                logger.info("🔧 Initializing risk scorer...")
+                scorer = EnhancedScamRiskScorer(bert)
+                
+                return {'bert': bert, 'features': features, 'scorer': scorer}
+            except Exception as e:
+                logger.error(f"❌ AI initialization failed: {e}")
+                return None
         
-        logger.info("🔧 Initializing feature extractor...")
-        AI_COMPONENTS['feature_extractor'] = AdvancedScamFeatureExtractor()
+        # Use thread with longer timeout to prevent hanging
+        result_queue = queue.Queue()
         
-        logger.info("🔧 Initializing risk scorer...")
-        AI_COMPONENTS['risk_scorer'] = EnhancedScamRiskScorer(AI_COMPONENTS['bert_classifier'])
+        def worker():
+            result = _init_worker()
+            result_queue.put(result)
         
-        AI_COMPONENTS['initialized'] = True
-        logger.info("✅ Elephas AI components initialized successfully")
+        thread = threading.Thread(target=worker)
+        thread.daemon = True
+        thread.start()
+        
+        # Wait for result with extended timeout for private models
+        try:
+            result = result_queue.get(timeout=120)  # 2 minute timeout for private models
+            if result:
+                AI_COMPONENTS['bert_classifier'] = result['bert']
+                AI_COMPONENTS['feature_extractor'] = result['features']
+                AI_COMPONENTS['risk_scorer'] = result['scorer']
+                AI_COMPONENTS['initialized'] = True
+                logger.info("✅ Elephas AI components initialized successfully")
+            else:
+                raise Exception("AI initialization returned None")
+        except queue.Empty:
+            logger.error("❌ AI initialization timed out (120s)")
+            thread.join(timeout=0)  # Don't wait for thread to finish
+            raise Exception("AI initialization timeout - try making model public or upgrade to premium tier")
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize AI components: {e}")
-        logger.error("🔄 Permanently switching to fallback detection")
-        logger.error("💡 Solution: Upgrade to Render Premium or migrate to Google Cloud Run")
+        logger.info("🔄 Using fallback detection system")
         AI_COMPONENTS['initialization_failed'] = True
         AI_COMPONENTS['initialized'] = False
+        return _initialize_fallback_components()
+
+def _initialize_fallback_components():
+    """Initialize lightweight fallback components when AI fails"""
+    try:
+        logger.info("🔧 Initializing fallback detection system...")
+        AI_COMPONENTS['feature_extractor'] = AdvancedScamFeatureExtractor()
+        AI_COMPONENTS['initialized'] = True
+        logger.info("✅ Fallback detection system ready")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Even fallback initialization failed: {e}")
+        return False
 
 # Don't initialize components on module load to avoid blocking server startup
 # Components will be initialized on first API request
@@ -232,18 +272,13 @@ app.include_router(enterprise_router)
 # Background AI initialization
 @app.on_event("startup")
 async def startup_event():
-    """Initialize AI components synchronously on startup (main thread)"""
-    logger.info("🚀 Starting AI initialization in main thread...")
-    try:
-        # Initialize components in main thread to avoid signal handling issues
-        initialize_ai_components()
-        if AI_COMPONENTS['initialized']:
-            logger.info("✅ AI initialization completed successfully")
-        else:
-            logger.warning("⚠️ AI initialization failed - falling back to rule-based detection")
-    except Exception as e:
-        logger.error(f"❌ AI initialization error: {e}")
-        logger.warning("⚠️ Using fallback detection methods")
+    """Initialize components on startup without blocking server"""
+    logger.info("🚀 Server startup - AI will be initialized on first request")
+    logger.info("📊 Dashboard and API endpoints are immediately available")
+    
+    # Don't initialize AI on startup to prevent blocking
+    # AI will be initialized lazily on first scan request
+    pass
 
 # 🏠 Serve dashboard static files from SDK folder
 dashboard_path = os.path.join(os.path.dirname(__file__), "..", "..", "elephas-ai-sdk", "dashboard")
@@ -336,15 +371,33 @@ async def get_logo_full():
 # ✅ Health check for Render and real-time monitoring
 @app.get("/health")
 async def health():
-    # Always return healthy status for deployment - don't depend on external services
-    return {
+    """Comprehensive health check for deployment monitoring"""
+    health_data = {
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
         "version": "2.0.0",
         "environment": os.getenv("ENVIRONMENT", "development"),
-        "database": "optional",
-        "cache": "optional"
+        "port": os.getenv("PORT", "8000"),
+        "components": {
+            "api": "healthy",
+            "dashboard": "available" if actual_dashboard_path else "not_found",
+            "ai": "unknown",
+            "database": "optional"
+        }
     }
+    
+    # Check AI component status
+    try:
+        if AI_COMPONENTS['initialized']:
+            health_data["components"]["ai"] = "initialized"
+        elif AI_COMPONENTS['initialization_failed']:
+            health_data["components"]["ai"] = "fallback_mode"
+        else:
+            health_data["components"]["ai"] = "not_initialized"
+    except:
+        health_data["components"]["ai"] = "unknown"
+    
+    return health_data
 
 # 🤖 AI Status endpoint
 @app.get("/ai-status")
@@ -357,7 +410,6 @@ async def ai_status():
         "bert_classifier_loaded": AI_COMPONENTS['bert_classifier'] is not None,
         "feature_extractor_loaded": AI_COMPONENTS['feature_extractor'] is not None,
         "risk_scorer_loaded": AI_COMPONENTS['risk_scorer'] is not None,
-        "hf_token_available": os.getenv("HF_TOKEN") is not None,
         "mode": "AI-powered" if AI_COMPONENTS['initialized'] else "fallback",
         "timestamp": datetime.now().isoformat()
     }
@@ -395,7 +447,78 @@ async def test_scan_simple(body: ScanRequest):
         "note": "This is a simple test endpoint without AI initialization"
     }
 
-# 📊 Real-time Dashboard API endpoints using database
+# � Detailed debug endpoint for AI troubleshooting
+@app.get("/debug/detailed")
+async def get_detailed_debug():
+    """Get comprehensive debug information for AI loading issues"""
+    
+    debug_info = {
+        "ai_components": {
+            "initialized": AI_COMPONENTS['initialized'],
+            "initialization_failed": AI_COMPONENTS['initialization_failed'],
+            "last_attempt": AI_COMPONENTS['last_attempt'],
+            "bert_classifier": AI_COMPONENTS['bert_classifier'] is not None,
+            "feature_extractor": AI_COMPONENTS['feature_extractor'] is not None,
+            "risk_scorer": AI_COMPONENTS['risk_scorer'] is not None
+        },
+        "authentication": {
+            "model_path": os.getenv("MODEL_PATH", "elephasai/elephas")
+        },
+        "environment": {
+            "render_deployment": bool(os.getenv("RENDER")),
+            "environment": os.getenv("ENVIRONMENT", "development"),
+            "port": os.getenv("PORT", "8000"),
+            "force_private_model": os.getenv("FORCE_PRIVATE_MODEL"),
+            "tokenizers_parallelism": os.getenv("TOKENIZERS_PARALLELISM"),
+            "omp_num_threads": os.getenv("OMP_NUM_THREADS")
+        },
+        "troubleshooting": {
+            "recommendation": "unknown"
+        }
+    }
+    
+    # Add specific recommendations based on status
+    if AI_COMPONENTS['initialization_failed']:
+        debug_info["troubleshooting"]["recommendation"] = "Consider making model public or upgrading to Render premium"
+    elif not AI_COMPONENTS['initialized']:
+        debug_info["troubleshooting"]["recommendation"] = "Try POST /debug/force-init to attempt AI initialization"
+    else:
+        debug_info["troubleshooting"]["recommendation"] = "AI is working correctly"
+    
+    return debug_info
+
+# 🔄 Force AI initialization endpoint
+@app.post("/debug/force-init")
+async def force_ai_initialization():
+    """Force AI initialization attempt (for debugging)"""
+    global AI_COMPONENTS
+    
+    # Reset initialization state
+    AI_COMPONENTS['initialized'] = False
+    AI_COMPONENTS['initialization_failed'] = False
+    AI_COMPONENTS['last_attempt'] = None
+    
+    try:
+        logger.info("🔄 Manual AI initialization triggered")
+        initialize_ai_components()
+        
+        return {
+            "success": AI_COMPONENTS['initialized'],
+            "initialized": AI_COMPONENTS['initialized'],
+            "failed": AI_COMPONENTS['initialization_failed'],
+            "message": "AI initialization attempted successfully" if AI_COMPONENTS['initialized'] else "AI initialization failed - check logs"
+        }
+    except Exception as e:
+        logger.error(f"Manual AI initialization failed: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "initialized": AI_COMPONENTS['initialized'],
+            "failed": AI_COMPONENTS['initialization_failed'],
+            "message": f"AI initialization failed: {e}"
+        }
+
+# �📊 Real-time Dashboard API endpoints using database
 @app.get("/api/stats", response_model=DashboardStats)
 async def get_dashboard_stats():
     """Get real-time dashboard statistics from database"""
@@ -578,15 +701,21 @@ async def scan_message(
             return result
 
         # Check if AI components are initialized
+        if not AI_COMPONENTS['initialized'] and not AI_COMPONENTS['initialization_failed']:
+            # Try to initialize AI on first request
+            logger.info("🔧 First scan request - attempting AI initialization...")
+            try:
+                initialize_ai_components()
+            except Exception as init_error:
+                logger.error(f"❌ AI initialization failed: {init_error}")
+        
+        # Use AI if available, otherwise fallback
         if not AI_COMPONENTS['initialized']:
-            # Check if initialization has permanently failed
             if AI_COMPONENTS['initialization_failed']:
-                logger.debug("Using fallback detection - AI initialization permanently failed (upgrade to Premium tier or Google Cloud Run needed)")
-                result = await _fallback_scan(message, sender, start_time)
+                logger.debug("Using fallback detection - AI initialization permanently failed")
             else:
-                # Don't block the request - immediately use fallback
                 logger.info("AI components not yet initialized - using fallback detection")
-                result = await _fallback_scan(message, sender, start_time)
+            result = await _fallback_scan(message, sender, start_time)
             
             # Log usage if authenticated
             if api_key:

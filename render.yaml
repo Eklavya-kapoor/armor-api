@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: python run_server.py
     healthCheckPath: /health
     domains:
       - elephas-ai-api.onrender.com
@@ -24,8 +24,6 @@ services:
         value: v2.0
       - key: API_DESCRIPTION
         value: Advanced AI-powered threat detection and security analysis
-      - key: PYTHONPATH
-        value: /opt/render/project/src
       - key: PORT
         value: "8000"
       # Memory optimization environment variables for free tier
@@ -39,6 +37,18 @@ services:
         value: "1"
       - key: TOKENIZERS_PARALLELISM
         value: "false"
+      - key: FORCE_PRIVATE_MODEL
+        value: "true"  # Prevent fallback to public models
+      # Additional stability settings
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+      - key: MAX_WORKERS
+        value: "1"
+      # Model fallback settings
+      - key: ALLOW_PUBLIC_FALLBACK
+        value: "true"
     disk:
       name: elephas-ai-disk
       mountPath: /opt/render/project/data
