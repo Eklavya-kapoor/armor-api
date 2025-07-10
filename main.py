@@ -13,8 +13,6 @@ from typing import Dict
 
 # elephas-ai/main.py
 
-print("🔥 STARTUP: main.py is executing...")
-
 import asyncio
 import logging
 import signal
@@ -24,57 +22,15 @@ from dotenv import load_dotenv
 load_dotenv()
 from typing import Dict
 
-print("🔥 STARTUP: Basic imports completed")
+from core.bert_classifier import BertScamClassifier
+from core.advanced_features import AdvancedScamFeatureExtractor
+from core.enhanced_scorer import EnhancedScamRiskScorer
+from core.realtime_processor import RealtimeScamProcessor
+from integrations.android_integration import AndroidIntegration
+from mobile.optimizer import MobileModelOptimizer
+from api.enhanced_routes import app
 
-# Check if we're in production mode early to avoid heavy imports
-if os.getenv("ENVIRONMENT") == "production":
-    print("🧪 PRODUCTION MODE: Skipping heavy imports for test server")
-    import uvicorn
-    from fastapi import FastAPI
-    
-    print("🧪 PRODUCTION MODE: FastAPI imported, starting test server...")
-    
-    test_app = FastAPI(title="Elephas AI Test Server")
-    
-    @test_app.get("/")
-    async def root():
-        return {"message": "Elephas AI Test Server", "status": "running", "mode": "production"}
-        
-    @test_app.get("/health") 
-    async def health():
-        return {"status": "ok", "message": "Test health check", "environment": os.getenv("ENVIRONMENT")}
-    
-    port = int(os.getenv("PORT", 8000))
-    print(f"🚀 PRODUCTION: Starting test server on 0.0.0.0:{port}")
-    
-    try:
-        uvicorn.run(
-            test_app, 
-            host="0.0.0.0", 
-            port=port, 
-            log_level="info",
-            access_log=True
-        )
-    except Exception as e:
-        print(f"❌ ERROR: Failed to start test server: {e}")
-        import traceback
-        traceback.print_exc()
-        
-else:
-    # Development mode - load all components
-    print("🏠 DEVELOPMENT MODE: Loading full AI components...")
-    
-    from core.bert_classifier import BertScamClassifier
-    from core.advanced_features import AdvancedScamFeatureExtractor
-    from core.enhanced_scorer import EnhancedScamRiskScorer
-    from core.realtime_processor import RealtimeScamProcessor
-    from integrations.android_integration import AndroidIntegration
-    from mobile.optimizer import MobileModelOptimizer
-    from api.enhanced_routes import app
-
-    print("🔥 STARTUP: All imports completed")
-
-    import uvicorn
+import uvicorn
 
 
 class ElephasAIOrchestrator:
@@ -229,14 +185,9 @@ class ElephasAIOrchestrator:
 
 
 if __name__ == "__main__":
-    print(f"🔥 MAIN: Starting with ENVIRONMENT={os.getenv('ENVIRONMENT', 'NOT_SET')}")
-    
-    # Production mode is handled above during imports
-    if os.getenv("ENVIRONMENT") != "production":
-        # Local development - use full orchestrator
-        print("🏠 MAIN: Starting full orchestrator for development")
-        orchestrator = ElephasAIOrchestrator()
-        mode = os.getenv("DEPLOYMENT_MODE", "full")
-        asyncio.run(orchestrator.start(mode=mode))
-    else:
-        print("🧪 MAIN: Production mode already handled above")
+    orchestrator = ElephasAIOrchestrator()
+    # Use api_only mode for web deployment, full mode for local development
+    mode = os.getenv("DEPLOYMENT_MODE", "full")
+    if os.getenv("ENVIRONMENT") == "production":
+        mode = "api_only"
+    asyncio.run(orchestrator.start(mode=mode))
