@@ -173,4 +173,8 @@ class ElephasAIOrchestrator:
 
 if __name__ == "__main__":
     orchestrator = ElephasAIOrchestrator()
-    asyncio.run(orchestrator.start(mode="full"))  # Change mode if needed
+    # Use api_only mode for web deployment, full mode for local development
+    mode = os.getenv("DEPLOYMENT_MODE", "full")
+    if os.getenv("ENVIRONMENT") == "production":
+        mode = "api_only"
+    asyncio.run(orchestrator.start(mode=mode))
