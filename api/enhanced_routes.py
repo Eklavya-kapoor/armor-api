@@ -55,8 +55,8 @@ def initialize_ai_components():
         logger.error(f"❌ Failed to initialize AI components: {e}")
         AI_COMPONENTS['initialized'] = False
 
-# Initialize components on module load
-initialize_ai_components()
+# Don't initialize components on module load to avoid blocking server startup
+# Components will be initialized on first API request
 
 # Import real data service (optional)
 try:

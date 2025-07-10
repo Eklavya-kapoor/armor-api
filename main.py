@@ -172,9 +172,27 @@ class ElephasAIOrchestrator:
 
 
 if __name__ == "__main__":
-    orchestrator = ElephasAIOrchestrator()
-    # Use api_only mode for web deployment, full mode for local development
-    mode = os.getenv("DEPLOYMENT_MODE", "full")
+    # Temporary: Use simple test server for debugging port issues
     if os.getenv("ENVIRONMENT") == "production":
-        mode = "api_only"
-    asyncio.run(orchestrator.start(mode=mode))
+        print("🧪 Starting in test mode for production debugging...")
+        import uvicorn
+        from fastapi import FastAPI
+        
+        test_app = FastAPI(title="Elephas AI Test")
+        
+        @test_app.get("/")
+        async def root():
+            return {"message": "Elephas AI Test Server", "status": "running"}
+            
+        @test_app.get("/health") 
+        async def health():
+            return {"status": "ok", "message": "Test health check"}
+        
+        port = int(os.getenv("PORT", 8000))
+        print(f"🚀 Starting test server on port {port}")
+        uvicorn.run(test_app, host="0.0.0.0", port=port, log_level="info")
+    else:
+        # Local development - use full orchestrator
+        orchestrator = ElephasAIOrchestrator()
+        mode = os.getenv("DEPLOYMENT_MODE", "full")
+        asyncio.run(orchestrator.start(mode=mode))
