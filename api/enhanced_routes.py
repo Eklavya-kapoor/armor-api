@@ -35,14 +35,27 @@ AI_COMPONENTS = {
     'bert_classifier': None,
     'feature_extractor': None,
     'risk_scorer': None,
-    'initialized': False
+    'initialized': False,
+    'initialization_failed': False,  # Track if initialization permanently failed
+    'last_attempt': None
 }
 
 def initialize_ai_components():
     """Initialize the AI components for scam detection with better error handling"""
     global AI_COMPONENTS
-    if AI_COMPONENTS['initialized']:
+    if AI_COMPONENTS['initialized'] or AI_COMPONENTS['initialization_failed']:
         return
+    
+    import time
+    
+    # Prevent too frequent retry attempts
+    if AI_COMPONENTS['last_attempt']:
+        time_since_last = time.time() - AI_COMPONENTS['last_attempt']
+        if time_since_last < 300:  # Wait 5 minutes between attempts
+            logger.debug("Skipping AI initialization - too soon since last attempt")
+            return
+    
+    AI_COMPONENTS['last_attempt'] = time.time()
     
     try:
         logger.info("🐘 Initializing Elephas AI components...")
@@ -51,11 +64,11 @@ def initialize_ai_components():
         hf_token = os.getenv("HF_TOKEN")
         if not hf_token:
             logger.error("❌ HF_TOKEN not found - cannot load private model")
+            AI_COMPONENTS['initialization_failed'] = True
             raise Exception("Missing HF_TOKEN for private model access")
         
         # Add timeout protection using threading
         import threading
-        import time
         
         result = {'success': False, 'error': None}
         
@@ -76,9 +89,14 @@ def initialize_ai_components():
         
         if thread.is_alive():
             logger.error("❌ AI initialization timed out after 3 minutes")
-            raise Exception("AI initialization timeout - likely memory issues on free tier")
+            logger.error("💾 Likely cause: Model too large for 512MB free tier")
+            logger.error("💡 Solution: Upgrade to Render Premium or use Google Cloud Run")
+            AI_COMPONENTS['initialization_failed'] = True
+            raise Exception("AI initialization timeout - upgrade to Premium or use Google Cloud Run")
         
         if not result['success']:
+            logger.error(f"❌ AI initialization failed: {result['error']}")
+            AI_COMPONENTS['initialization_failed'] = True
             raise Exception(f"AI initialization failed: {result['error']}")
         
         AI_COMPONENTS['initialized'] = True
@@ -86,7 +104,9 @@ def initialize_ai_components():
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize AI components: {e}")
-        logger.info("🔄 Will use fallback detection")
+        logger.error("🔄 Permanently switching to fallback detection")
+        logger.error("💡 Solution: Upgrade to Render Premium or migrate to Google Cloud Run")
+        AI_COMPONENTS['initialization_failed'] = True
         AI_COMPONENTS['initialized'] = False
 
 # Don't initialize components on module load to avoid blocking server startup
@@ -476,6 +496,11 @@ async def scan_message(body: ScanRequest):
 
         # Check if AI components are initialized
         if not AI_COMPONENTS['initialized']:
+            # Check if initialization has permanently failed
+            if AI_COMPONENTS['initialization_failed']:
+                logger.debug("Using fallback detection - AI initialization permanently failed (upgrade to Premium tier or Google Cloud Run needed)")
+                return await _fallback_scan(message, sender, start_time)
+            
             logger.warning("AI components not initialized, attempting to reinitialize...")
             try:
                 # Try to initialize with a shorter timeout for subsequent attempts
@@ -855,7 +880,7 @@ async def bulk_scan_messages(body: BulkScanRequest):
     """Scan multiple messages efficiently with AI optimization"""
     start_time = time.time()
     
-    if not AI_COMPONENTS['initialized']:
+    if not AI_COMPONENTS['initialized'] and not AI_COMPONENTS['initialization_failed']:
         initialize_ai_components()
     
     if len(body.messages) > 100:
@@ -979,7 +1004,7 @@ async def enhanced_scan(body: ScanRequest):
     """Enhanced scan with detailed forensic analysis and threat intelligence"""
     start_time = time.time()
     
-    if not AI_COMPONENTS['initialized']:
+    if not AI_COMPONENTS['initialized'] and not AI_COMPONENTS['initialization_failed']:
         initialize_ai_components()
     
     message = body.text.strip()
