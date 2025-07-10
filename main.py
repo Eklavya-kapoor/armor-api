@@ -1,3 +1,4 @@
+
 # elephas-ai/main.py
 
 print("🔥 STARTUP: main.py is executing...")
@@ -58,6 +59,13 @@ class ElephasAIOrchestrator:
     def _initialize_components(self):
         """Initialize core Elephas AI modules."""
         try:
+            # In production, skip heavy AI initialization during startup
+            if os.getenv("ENVIRONMENT") == "production":
+                self.logger.info("🚀 Production mode: Skipping heavy AI initialization during startup")
+                self.logger.info("🚀 AI components will be loaded on first API request")
+                self.components['initialized'] = False
+                return
+            
             self.logger.info("🐘 Initializing Elephas AI components...")
 
             self.components['bert_classifier'] = BertScamClassifier()
@@ -67,6 +75,7 @@ class ElephasAIOrchestrator:
             self.components['android_integration'] = AndroidIntegration(scam_detector=self)
             self.components['mobile_optimizer'] = MobileModelOptimizer(model_path="scambert-model-v2")
 
+            self.components['initialized'] = True
             self.logger.info("✅ Elephas AI components initialized.")
         except Exception as e:
             self.logger.error(f"❌ Initialization error: {e}")
