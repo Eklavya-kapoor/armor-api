@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat Detection | Elephas AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .threat-scanner {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .scanner-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .scanner-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .scanner-subtitle {
+            color: #888;
+            font-size: 1rem;
+        }
+
+        .scan-form {
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1rem;
+        }
+
+        .input-group input::placeholder,
+        .input-group textarea::placeholder {
+            color: #666;
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2);
+        }
+
+        .scan-button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .scan-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .scan-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-container {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+
+        .results-container.show {
+            display: block;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .risk-indicator {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .risk-indicator.low {
+            background: linear-gradient(45deg, #00ff7f, #00ffff);
+        }
+
+        .risk-indicator.medium {
+            background: linear-gradient(45deg, #ffa500, #ffff00);
+        }
+
+        .risk-indicator.high {
+            background: linear-gradient(45deg, #ff0055, #ff4500);
+        }
+
+        .result-details {
+            flex: 1;
+        }
+
+        .risk-score {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .risk-level {
+            color: #888;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .explanation {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border-left: 4px solid #00ffff;
+        }
+
+        .explanation h4 {
+            margin-bottom: 0.5rem;
+            color: #00ffff;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .feature-item {
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .feature-value {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .feature-value.high-risk {
+            color: #ff0055;
+            font-weight: 600;
+        }
+
+        .feature-value.medium-risk {
+            color: #ffa500;
+            font-weight: 500;
+        }
+
+        .feature-value.low-risk {
+            color: #00ff7f;
+            font-weight: 500;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #00ffff;
+            text-decoration: none;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            background: rgba(0, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="threat-scanner">
+        <a href="index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+        
+        <div class="scanner-header">
+            <h1 class="scanner-title">Elephas AI Threat Detection</h1>
+            <p class="scanner-subtitle">Analyze messages, emails, and text for potential scams and threats</p>
+        </div>
+
+        <form class="scan-form" id="scanForm">
+            <div class="input-group">
+                <label for="messageText">Message to Analyze</label>
+                <textarea 
+                    id="messageText" 
+                    name="messageText" 
+                    placeholder="Paste the message, email, or text you want to analyze for scams..."
+                    required
+                ></textarea>
+            </div>
+
+            <div class="input-group">
+                <label for="senderInfo">Sender Information (Optional)</label>
+                <input 
+                    type="text" 
+                    id="senderInfo" 
+                    name="senderInfo" 
+                    placeholder="Email address, phone number, or sender name"
+                >
+            </div>
+
+            <button type="submit" class="scan-button" id="scanButton">
+                <i class="fas fa-search"></i>
+                Analyze Threat
+            </button>
+        </form>
+
+        <div class="results-container" id="resultsContainer">
+            <div class="result-header">
+                <div class="risk-indicator" id="riskIndicator">
+                    <span id="riskScore">0</span>
+                </div>
+                <div class="result-details">
+                    <div class="risk-score" id="riskScoreText">0% Risk</div>
+                    <div class="risk-level" id="riskLevelText">Unknown</div>
+                </div>
+            </div>
+
+            <div class="explanation" id="explanationDiv">
+                <h4>Analysis Results</h4>
+                <p id="explanationText">No analysis performed yet.</p>
+            </div>
+
+            <div class="features-grid" id="featuresGrid">
+                <!-- Features will be populated here -->
+            </div>
+        </div>
+
+        <div class="loading" id="loadingDiv" style="display: none;">
+            <i class="fas fa-spinner"></i>
+            <p>Analyzing message for threats...</p>
+        </div>
+    </div>
+
+    <script>
+        class ThreatScanner {
+            constructor() {
+                this.apiUrl = 'http://localhost:8000/scan';
+                this.form = document.getElementById('scanForm');
+                this.resultsContainer = document.getElementById('resultsContainer');
+                this.loadingDiv = document.getElementById('loadingDiv');
+                this.scanButton = document.getElementById('scanButton');
+                
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                this.form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.performScan();
+                });
+            }
+
+            async performScan() {
+                const messageText = document.getElementById('messageText').value;
+                const senderInfo = document.getElementById('senderInfo').value;
+
+                if (!messageText.trim()) {
+                    alert('Please enter a message to analyze');
+                    return;
+                }
+
+                this.showLoading();
+                
+                try {
+                    const response = await fetch(this.apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: messageText,
+                            sender: senderInfo,
+                            metadata: {
+                                detect_mixed_language: true
+                            }
+                        })
+                    });
+
+                    const result = await response.json();
+                    this.displayResults(result);
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showError('Failed to analyze message. Please try again.');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            displayResults(result) {
+                const riskScore = Math.round(result.risk_score * 100);
+                const riskLevel = result.risk_level || 'unknown';
+                
+                // Update risk indicator
+                const riskIndicator = document.getElementById('riskIndicator');
+                const riskScoreElement = document.getElementById('riskScore');
+                const riskScoreText = document.getElementById('riskScoreText');
+                const riskLevelText = document.getElementById('riskLevelText');
+                
+                riskScoreElement.textContent = riskScore;
+                riskScoreText.textContent = `${riskScore}% Risk`;
+                riskLevelText.textContent = riskLevel.toUpperCase();
+                
+                // Set risk level styling
+                riskIndicator.className = 'risk-indicator';
+                if (riskScore < 30) {
+                    riskIndicator.classList.add('low');
+                } else if (riskScore < 70) {
+                    riskIndicator.classList.add('medium');
+                } else {
+                    riskIndicator.classList.add('high');
+                }
+                
+                // Update explanation
+                const explanationText = document.getElementById('explanationText');
+                explanationText.textContent = result.explanation || 'No explanation available';
+                
+                // Add processing time and confidence info
+                const processingTime = result.processing_time || 0;
+                const confidence = result.confidence || 0;
+                explanationText.innerHTML += `<br><br><strong>Processing Time:</strong> ${processingTime.toFixed(1)}ms<br><strong>AI Confidence:</strong> ${(confidence * 100).toFixed(1)}%`;
+                
+                // Update features - only show meaningful ones
+                this.displayFeatures(result.features || {});
+                
+                // Show results
+                this.resultsContainer.classList.add('show');
+            }
+
+            displayFeatures(features) {
+                const featuresGrid = document.getElementById('featuresGrid');
+                featuresGrid.innerHTML = '';
+                
+                // Only show meaningful features with non-zero values
+                const meaningfulFeatures = [
+                    { key: 'length', name: 'Message Length', format: (val) => val || 0, threshold: 0 },
+                    { key: 'word_count', name: 'Word Count', format: (val) => val || 0, threshold: 0 },
+                    { key: 'url_count', name: 'URLs Found', format: (val) => val || 0, threshold: 0 },
+                    { key: 'suspicious_url_count', name: 'Suspicious URLs', format: (val) => val || 0, threshold: 0 },
+                    { key: 'urgency_keywords', name: 'Urgency Keywords', format: (val) => val || 0, threshold: 0 },
+                    { key: 'money_keywords', name: 'Money Keywords', format: (val) => val || 0, threshold: 0 },
+                    { key: 'personal_keywords', name: 'Personal Info Requests', format: (val) => val || 0, threshold: 0 },
+                    { key: 'threats_keywords', name: 'Threat Keywords', format: (val) => val || 0, threshold: 0 },
+                    { key: 'action_keywords', name: 'Action Keywords', format: (val) => val || 0, threshold: 0 },
+                    { key: 'phone_count', name: 'Phone Numbers', format: (val) => val || 0, threshold: 0 },
+                    { key: 'email_count', name: 'Email Addresses', format: (val) => val || 0, threshold: 0 },
+                    { key: 'exclamation_count', name: 'Exclamation Marks', format: (val) => val || 0, threshold: 0 },
+                    { key: 'uppercase_ratio', name: 'Uppercase Ratio', format: (val) => ((val || 0) * 100).toFixed(1) + '%', threshold: 0.05 },
+                    { key: 'caps_lock_words', name: 'ALL CAPS Words', format: (val) => val || 0, threshold: 0 },
+                    { key: 'sender_suspicious', name: 'Sender Suspicious', format: (val) => val ? 'Yes' : 'No', showAlways: true }
+                ];
+                
+                // Filter and display only meaningful features
+                const displayedFeatures = meaningfulFeatures.filter(feature => {
+                    const value = features[feature.key];
+                    
+                    // Always show these features
+                    if (feature.showAlways) return true;
+                    
+                    // Show if value is above threshold
+                    if (feature.threshold !== undefined) {
+                        return value > feature.threshold;
+                    }
+                    
+                    // Show if value is truthy and not zero
+                    return value && value !== 0;
+                });
+                
+                // If no meaningful features, show basic info
+                if (displayedFeatures.length === 0) {
+                    displayedFeatures.push(
+                        { key: 'length', name: 'Message Length', format: (val) => val || 0 },
+                        { key: 'word_count', name: 'Word Count', format: (val) => val || 0 },
+                        { key: 'sender_suspicious', name: 'Sender Suspicious', format: (val) => val ? 'Yes' : 'No' }
+                    );
+                }
+                
+                displayedFeatures.forEach(feature => {
+                    const featureDiv = document.createElement('div');
+                    featureDiv.className = 'feature-item';
+                    
+                    const value = features[feature.key];
+                    const formattedValue = feature.format(value);
+                    
+                    // Add color coding for important features
+                    let colorClass = '';
+                    if (feature.key === 'suspicious_url_count' && value > 0) colorClass = 'high-risk';
+                    else if (feature.key === 'urgency_keywords' && value > 0) colorClass = 'medium-risk';
+                    else if (feature.key === 'personal_keywords' && value > 0) colorClass = 'high-risk';
+                    else if (feature.key === 'threats_keywords' && value > 0) colorClass = 'high-risk';
+                    else if (feature.key === 'sender_suspicious' && value) colorClass = 'medium-risk';
+                    
+                    featureDiv.innerHTML = `
+                        <div class="feature-name">${feature.name}</div>
+                        <div class="feature-value ${colorClass}">${formattedValue}</div>
+                    `;
+                    featuresGrid.appendChild(featureDiv);
+                });
+            }
+
+            showLoading() {
+                this.loadingDiv.style.display = 'block';
+                this.resultsContainer.classList.remove('show');
+                this.scanButton.disabled = true;
+                this.scanButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            }
+
+            hideLoading() {
+                this.loadingDiv.style.display = 'none';
+                this.scanButton.disabled = false;
+                this.scanButton.innerHTML = '<i class="fas fa-search"></i> Analyze Threat';
+            }
+
+            showError(message) {
+                alert(message);
+            }
+        }
+
+        // Initialize the threat scanner
+        document.addEventListener('DOMContentLoaded', () => {
+            new ThreatScanner();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics | Elephas AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .grid-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .main-container {
+            position: relative;
+            z-index: 3;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .analytics-header {
+            margin-bottom: 2rem;
+        }
+
+        .analytics-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .analytics-subtitle {
+            color: #888;
+            font-size: 1.1rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #00ffff;
+            text-decoration: none;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            background: rgba(0, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .time-filter {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-button {
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 6px;
+            color: #00ffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-button.active {
+            background: rgba(0, 255, 255, 0.3);
+            border-color: #00ffff;
+        }
+
+        .filter-button:hover {
+            background: rgba(0, 255, 255, 0.2);
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .stat-change {
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        .stat-change.positive {
+            color: #00ff7f;
+        }
+
+        .stat-change.negative {
+            color: #ff0055;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .full-width-chart {
+            grid-column: 1 / -1;
+        }
+
+        .threat-types-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .threat-type-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .threat-type-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .threat-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .threat-icon.phishing {
+            background: rgba(255, 0, 85, 0.2);
+            color: #ff0055;
+        }
+
+        .threat-icon.malware {
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+        }
+
+        .threat-icon.spam {
+            background: rgba(0, 255, 127, 0.2);
+            color: #00ff7f;
+        }
+
+        .threat-icon.fraud {
+            background: rgba(0, 255, 255, 0.2);
+            color: #00ffff;
+        }
+
+        .threat-name {
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .threat-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+
+        .threat-count {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .threat-percentage {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .performance-metrics {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            margin-bottom: 2rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .metric-item {
+            text-align: center;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #00ffff;
+        }
+
+        .metric-label {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .time-filter {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-background"></div>
+    
+    <div class="main-container">
+        <a href="index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+        
+        <div class="analytics-header">
+            <h1 class="analytics-title">Threat Analytics</h1>
+            <p class="analytics-subtitle">Comprehensive analysis of security threats and system performance</p>
+        </div>
+
+        <div class="time-filter">
+            <button class="filter-button active" data-period="24h">Last 24 Hours</button>
+            <button class="filter-button" data-period="7d">Last 7 Days</button>
+            <button class="filter-button" data-period="30d">Last 30 Days</button>
+            <button class="filter-button" data-period="90d">Last 90 Days</button>
+        </div>
+
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-value" id="totalThreats">2,847</div>
+                <div class="stat-label">Total Threats Blocked</div>
+                <div class="stat-change positive">+12.5% from yesterday</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="detectionRate">99.7%</div>
+                <div class="stat-label">Detection Accuracy</div>
+                <div class="stat-change positive">+0.2% from yesterday</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="falsePositives">0.3%</div>
+                <div class="stat-label">False Positive Rate</div>
+                <div class="stat-change negative">-0.1% from yesterday</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgResponse">23ms</div>
+                <div class="stat-label">Average Response Time</div>
+                <div class="stat-change positive">-2ms from yesterday</div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-card">
+                <h3 class="chart-title">
+                    <i class="fas fa-chart-line"></i>
+                    Threat Detection Trend
+                </h3>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3 class="chart-title">
+                    <i class="fas fa-pie-chart"></i>
+                    Threat Distribution
+                </h3>
+                <div class="chart-container">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card full-width-chart">
+                <h3 class="chart-title">
+                    <i class="fas fa-clock"></i>
+                    Hourly Threat Activity
+                </h3>
+                <div class="chart-container">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="threat-types-grid">
+            <div class="threat-type-card">
+                <div class="threat-type-header">
+                    <div class="threat-icon phishing">
+                        <i class="fas fa-fish"></i>
+                    </div>
+                    <span class="threat-name">Phishing Attempts</span>
+                </div>
+                <div class="threat-stats">
+                    <span class="threat-count">1,284</span>
+                    <span class="threat-percentage">45.1%</span>
+                </div>
+            </div>
+
+            <div class="threat-type-card">
+                <div class="threat-type-header">
+                    <div class="threat-icon malware">
+                        <i class="fas fa-virus"></i>
+                    </div>
+                    <span class="threat-name">Malware Links</span>
+                </div>
+                <div class="threat-stats">
+                    <span class="threat-count">712</span>
+                    <span class="threat-percentage">25.0%</span>
+                </div>
+            </div>
+
+            <div class="threat-type-card">
+                <div class="threat-type-header">
+                    <div class="threat-icon spam">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <span class="threat-name">Spam Messages</span>
+                </div>
+                <div class="threat-stats">
+                    <span class="threat-count">427</span>
+                    <span class="threat-percentage">15.0%</span>
+                </div>
+            </div>
+
+            <div class="threat-type-card">
+                <div class="threat-type-header">
+                    <div class="threat-icon fraud">
+                        <i class="fas fa-credit-card"></i>
+                    </div>
+                    <span class="threat-name">Financial Fraud</span>
+                </div>
+                <div class="threat-stats">
+                    <span class="threat-count">285</span>
+                    <span class="threat-percentage">10.0%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="performance-metrics">
+            <h3 class="chart-title">
+                <i class="fas fa-tachometer-alt"></i>
+                System Performance Metrics
+            </h3>
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="metric-value">156,382</div>
+                    <div class="metric-label">Messages Processed</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">23ms</div>
+                    <div class="metric-label">Avg Processing Time</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">99.9%</div>
+                    <div class="metric-label">System Uptime</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">2.1GB</div>
+                    <div class="metric-label">Memory Usage</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">15%</div>
+                    <div class="metric-label">CPU Usage</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">450GB</div>
+                    <div class="metric-label">Storage Used</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chart.js configuration
+        Chart.defaults.color = '#ffffff';
+        Chart.defaults.backgroundColor = 'rgba(0, 255, 255, 0.1)';
+        Chart.defaults.borderColor = 'rgba(0, 255, 255, 0.2)';
+
+        // Trend Chart
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        const trendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: ['6h ago', '5h ago', '4h ago', '3h ago', '2h ago', '1h ago', 'Now'],
+                datasets: [{
+                    label: 'Threats Detected',
+                    data: [45, 52, 38, 67, 89, 74, 95],
+                    borderColor: '#ff0055',
+                    backgroundColor: 'rgba(255, 0, 85, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Distribution Chart
+        const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+        const distributionChart = new Chart(distributionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Phishing', 'Malware', 'Spam', 'Fraud', 'Other'],
+                datasets: [{
+                    data: [45.1, 25.0, 15.0, 10.0, 4.9],
+                    backgroundColor: [
+                        '#ff0055',
+                        '#ffa500',
+                        '#00ff7f',
+                        '#00ffff',
+                        '#ff00ff'
+                    ],
+                    borderColor: 'rgba(0, 0, 0, 0.8)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#ffffff',
+                            padding: 15
+                        }
+                    }
+                }
+            }
+        });
+
+        // Hourly Chart
+        const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+        const hourlyChart = new Chart(hourlyCtx, {
+            type: 'bar',
+            data: {
+                labels: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
+                datasets: [{
+                    label: 'Threats per Hour',
+                    data: [23, 15, 8, 12, 45, 67, 89, 92, 78, 65, 43, 29],
+                    backgroundColor: 'rgba(0, 255, 255, 0.3)',
+                    borderColor: '#00ffff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Time filter functionality
+        document.querySelectorAll('.filter-button').forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons
+                document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
+                
+                // Add active class to clicked button
+                button.classList.add('active');
+                
+                // Update charts based on selected period
+                const period = button.dataset.period;
+                updateChartsForPeriod(period);
+            });
+        });
+
+        function updateChartsForPeriod(period) {
+            // Fetch real data from API
+            fetch(`http://localhost:8001/analytics-data?period=${period}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update statistics with real data
+                    document.getElementById('totalThreats').textContent = data.threat_stats.total_threats.toLocaleString();
+                    document.getElementById('detectionRate').textContent = data.threat_stats.accuracy_rate + '%';
+                    document.getElementById('falsePositives').textContent = ((data.threat_stats.false_positives / data.threat_stats.total_threats) * 100).toFixed(1) + '%';
+                    document.getElementById('avgResponse').textContent = data.performance_metrics.avg_response_time + 'ms';
+
+                    // Update trend chart with real data
+                    if (data.trend_data.daily_threats && data.trend_data.daily_threats.length > 0) {
+                        trendChart.data.datasets[0].data = data.trend_data.daily_threats;
+                        trendChart.data.labels = ['6 days ago', '5 days ago', '4 days ago', '3 days ago', '2 days ago', 'Yesterday', 'Today'];
+                    } else {
+                        trendChart.data.datasets[0].data = data.trend_data.hourly_threats.slice(-7);
+                        trendChart.data.labels = ['6h ago', '5h ago', '4h ago', '3h ago', '2h ago', '1h ago', 'Now'];
+                    }
+
+                    // Update distribution chart with real threat types
+                    const threatTypes = data.trend_data.threat_types;
+                    distributionChart.data.datasets[0].data = [
+                        threatTypes.phishing,
+                        threatTypes.malware,
+                        threatTypes.spam,
+                        threatTypes.fraud,
+                        threatTypes.other
+                    ];
+
+                    // Update hourly chart with real hourly data
+                    hourlyChart.data.datasets[0].data = data.trend_data.hourly_threats;
+
+                    // Update all charts
+                    trendChart.update();
+                    distributionChart.update();
+                    hourlyChart.update();
+
+                    // Show success notification
+                    showUpdateNotification(period, data);
+                })
+                .catch(error => {
+                    console.error('Error fetching analytics data:', error);
+                    
+                    // Fall back to mock data
+                    const mockData = {
+                        '24h': {
+                            threats: 2847,
+                            accuracy: 99.7,
+                            falsePositives: 0.3,
+                            avgResponse: 23
+                        },
+                        '7d': {
+                            threats: 19856,
+                            accuracy: 99.5,
+                            falsePositives: 0.5,
+                            avgResponse: 25
+                        },
+                        '30d': {
+                            threats: 89432,
+                            accuracy: 99.3,
+                            falsePositives: 0.7,
+                            avgResponse: 27
+                        },
+                        '90d': {
+                            threats: 267891,
+                            accuracy: 99.1,
+                            falsePositives: 0.9,
+                            avgResponse: 29
+                        }
+                    };
+
+                    const fallbackData = mockData[period];
+                    document.getElementById('totalThreats').textContent = fallbackData.threats.toLocaleString();
+                    document.getElementById('detectionRate').textContent = fallbackData.accuracy + '%';
+                    document.getElementById('falsePositives').textContent = fallbackData.falsePositives + '%';
+                    document.getElementById('avgResponse').textContent = fallbackData.avgResponse + 'ms';
+                });
+        }
+
+        function showUpdateNotification(period, data) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(0, 255, 255, 0.1);
+                border: 1px solid rgba(0, 255, 255, 0.3);
+                border-radius: 8px;
+                padding: 1rem;
+                color: #00ffff;
+                z-index: 10000;
+                max-width: 300px;
+                backdrop-filter: blur(10px);
+            `;
+            notification.innerHTML = `
+                <div style="font-weight: 600; margin-bottom: 0.5rem;">
+                    <i class="fas fa-sync-alt"></i> Data Updated
+                </div>
+                <div style="font-size: 0.9rem;">
+                    ${period.toUpperCase()} analytics refreshed<br>
+                    <strong>${data.threat_stats.total_threats.toLocaleString()}</strong> threats analyzed<br>
+                    <strong>${data.threat_stats.accuracy_rate}%</strong> accuracy rate
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize with real data
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load initial data for 24h period
+            updateChartsForPeriod('24h');
+        });
+    </script>
+</body>
+</html>

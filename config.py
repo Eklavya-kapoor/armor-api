@@ -1,5 +1,5 @@
 
-# scamshield/config.py
+# elephas-ai/config.py
 import os
 from typing import Dict, Any
 

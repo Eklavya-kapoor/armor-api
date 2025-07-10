@@ -44,3 +44,29 @@ typing_extensions==4.14.0
 urllib3==2.4.0
 uvicorn==0.34.3
 python-dotenv==1.0.1
+
+# Database and caching for real data integration
+asyncpg>=0.28.0
+redis>=4.5.0
+sqlalchemy>=2.0.0
+alembic>=1.10.0
+
+# HTTP client and async support
+aiohttp>=3.8.0
+httpx>=0.24.0
+
+# External integrations
+psycopg2-binary>=2.9.0
+
+# Monitoring and logging
+prometheus-client>=0.16.0
+structlog>=22.0.0
+
+# Security
+cryptography>=40.0.0
+passlib>=1.7.0
+python-jose>=3.3.0
+
+# Data processing
+pytz>=2023.0
+python-dateutil>=2.8.0

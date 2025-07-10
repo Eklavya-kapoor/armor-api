@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | Elephas AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .settings-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+
+        .settings-header {
+            margin-bottom: 2rem;
+        }
+
+        .settings-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .settings-subtitle {
+            color: #888;
+            font-size: 1rem;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .settings-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            color: #ffffff;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            flex: 1;
+        }
+
+        .setting-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .setting-description {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #ffffff;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            left: 28px;
+        }
+
+        .input-field {
+            padding: 0.5rem 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 0.9rem;
+            width: 120px;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2);
+        }
+
+        .select-field {
+            padding: 0.5rem 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 0.9rem;
+            width: 140px;
+        }
+
+        .select-field:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2);
+        }
+
+        .save-button {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .save-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #00ffff;
+            text-decoration: none;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            background: rgba(0, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            background: rgba(0, 255, 127, 0.9);
+            border: 1px solid #00ff7f;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <a href="index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+        
+        <div class="settings-header">
+            <h1 class="settings-title">Elephas AI Security Settings</h1>
+            <p class="settings-subtitle">Configure your Elephas AI security preferences and detection parameters</p>
+        </div>
+
+        <div class="settings-grid">
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="card-title">Threat Detection</div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Real-time Scanning</div>
+                        <div class="setting-description">Enable continuous monitoring of messages</div>
+                    </div>
+                    <div class="toggle-switch active" data-setting="realtime"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Mixed Language Detection</div>
+                        <div class="setting-description">Detect scams in multiple languages</div>
+                    </div>
+                    <div class="toggle-switch active" data-setting="multilang"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Threat Sensitivity</div>
+                        <div class="setting-description">Adjust detection threshold</div>
+                    </div>
+                    <select class="select-field" data-setting="sensitivity">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Auto-Block High Risk</div>
+                        <div class="setting-description">Automatically block messages with high risk scores</div>
+                    </div>
+                    <div class="toggle-switch" data-setting="autoblock"></div>
+                </div>
+                
+                <button class="save-button" data-card="threat">Save Threat Settings</button>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="card-title">Notifications</div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Email Alerts</div>
+                        <div class="setting-description">Receive threat alerts via email</div>
+                    </div>
+                    <div class="toggle-switch active" data-setting="email"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">SMS Notifications</div>
+                        <div class="setting-description">Get critical alerts via SMS</div>
+                    </div>
+                    <div class="toggle-switch" data-setting="sms"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Dashboard Notifications</div>
+                        <div class="setting-description">Show notifications in dashboard</div>
+                    </div>
+                    <div class="toggle-switch active" data-setting="dashboard"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Alert Frequency</div>
+                        <div class="setting-description">How often to receive alerts</div>
+                    </div>
+                    <select class="select-field" data-setting="frequency">
+                        <option value="immediate" selected>Immediate</option>
+                        <option value="hourly">Hourly</option>
+                        <option value="daily">Daily</option>
+                    </select>
+                </div>
+                
+                <button class="save-button" data-card="notifications">Save Notification Settings</button>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <div class="card-title">System Performance</div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Model Optimization</div>
+                        <div class="setting-description">Optimize AI models for performance</div>
+                    </div>
+                    <div class="toggle-switch active" data-setting="optimization"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Cache Duration</div>
+                        <div class="setting-description">Cache results for faster processing</div>
+                    </div>
+                    <input type="number" class="input-field" value="300" data-setting="cache" min="60" max="3600">
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Max Concurrent Scans</div>
+                        <div class="setting-description">Maximum parallel scan operations</div>
+                    </div>
+                    <input type="number" class="input-field" value="10" data-setting="concurrent" min="1" max="100">
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Debug Mode</div>
+                        <div class="setting-description">Enable detailed logging</div>
+                    </div>
+                    <div class="toggle-switch" data-setting="debug"></div>
+                </div>
+                
+                <button class="save-button" data-card="performance">Save Performance Settings</button>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="card-title">Data & Privacy</div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Data Retention</div>
+                        <div class="setting-description">How long to keep scan data</div>
+                    </div>
+                    <select class="select-field" data-setting="retention">
+                        <option value="7">7 Days</option>
+                        <option value="30" selected>30 Days</option>
+                        <option value="90">90 Days</option>
+                        <option value="365">1 Year</option>
+                    </select>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Anonymous Analytics</div>
+                        <div class="setting-description">Help improve the system with usage data</div>
+                    </div>
+                    <div class="toggle-switch active" data-setting="analytics"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Export Data</div>
+                        <div class="setting-description">Allow data export for compliance</div>
+                    </div>
+                    <div class="toggle-switch active" data-setting="export"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Encryption Level</div>
+                        <div class="setting-description">Data encryption strength</div>
+                    </div>
+                    <select class="select-field" data-setting="encryption">
+                        <option value="aes128">AES-128</option>
+                        <option value="aes256" selected>AES-256</option>
+                        <option value="rsa2048">RSA-2048</option>
+                    </select>
+                </div>
+                
+                <button class="save-button" data-card="privacy">Save Privacy Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SettingsManager {
+            constructor() {
+                this.settings = this.loadSettings();
+                this.initializeEventListeners();
+                this.applySettings();
+            }
+
+            loadSettings() {
+                const defaultSettings = {
+                    realtime: true,
+                    multilang: true,
+                    sensitivity: 'medium',
+                    autoblock: false,
+                    email: true,
+                    sms: false,
+                    dashboard: true,
+                    frequency: 'immediate',
+                    optimization: true,
+                    cache: 300,
+                    concurrent: 10,
+                    debug: false,
+                    retention: '30',
+                    analytics: true,
+                    export: true,
+                    encryption: 'aes256'
+                };
+
+                const saved = localStorage.getItem('scamshield_settings');
+                return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+            }
+
+            saveSettings() {
+                localStorage.setItem('scamshield_settings', JSON.stringify(this.settings));
+            }
+
+            initializeEventListeners() {
+                // Toggle switches
+                document.querySelectorAll('.toggle-switch').forEach(toggle => {
+                    toggle.addEventListener('click', () => {
+                        const setting = toggle.dataset.setting;
+                        const isActive = toggle.classList.contains('active');
+                        
+                        if (isActive) {
+                            toggle.classList.remove('active');
+                            this.settings[setting] = false;
+                        } else {
+                            toggle.classList.add('active');
+                            this.settings[setting] = true;
+                        }
+                        
+                        this.saveSettings();
+                    });
+                });
+
+                // Input fields
+                document.querySelectorAll('.input-field').forEach(input => {
+                    input.addEventListener('change', () => {
+                        const setting = input.dataset.setting;
+                        this.settings[setting] = input.value;
+                        this.saveSettings();
+                    });
+                });
+
+                // Select fields
+                document.querySelectorAll('.select-field').forEach(select => {
+                    select.addEventListener('change', () => {
+                        const setting = select.dataset.setting;
+                        this.settings[setting] = select.value;
+                        this.saveSettings();
+                    });
+                });
+
+                // Save buttons
+                document.querySelectorAll('.save-button').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const cardType = button.dataset.card;
+                        this.saveSettingsCard(cardType);
+                    });
+                });
+            }
+
+            applySettings() {
+                // Apply toggle switches
+                document.querySelectorAll('.toggle-switch').forEach(toggle => {
+                    const setting = toggle.dataset.setting;
+                    if (this.settings[setting]) {
+                        toggle.classList.add('active');
+                    } else {
+                        toggle.classList.remove('active');
+                    }
+                });
+
+                // Apply input fields
+                document.querySelectorAll('.input-field').forEach(input => {
+                    const setting = input.dataset.setting;
+                    if (this.settings[setting] !== undefined) {
+                        input.value = this.settings[setting];
+                    }
+                });
+
+                // Apply select fields
+                document.querySelectorAll('.select-field').forEach(select => {
+                    const setting = select.dataset.setting;
+                    if (this.settings[setting] !== undefined) {
+                        select.value = this.settings[setting];
+                    }
+                });
+            }
+
+            saveSettingsCard(cardType) {
+                this.saveSettings();
+                this.showNotification(`${cardType.charAt(0).toUpperCase() + cardType.slice(1)} settings saved successfully!`);
+                
+                // Simulate API call
+                setTimeout(() => {
+                    console.log(`Settings for ${cardType} saved:`, this.settings);
+                }, 500);
+            }
+
+            showNotification(message) {
+                const notification = document.createElement('div');
+                notification.className = 'notification';
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+        }
+
+        // Initialize settings manager
+        document.addEventListener('DOMContentLoaded', () => {
+            new SettingsManager();
+        });
+    </script>
+</body>
+</html>

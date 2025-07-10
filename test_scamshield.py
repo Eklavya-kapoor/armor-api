@@ -2,8 +2,8 @@ import requests
 import json
 from datetime import datetime
 
-def test_scamshield_api():
-    """Test the ScamShield API with various scam examples"""
+def test_elephas_ai_api():
+    """Test the Elephas AI API with various scam examples"""
     
     base_url = "http://localhost:8000/api/v1"
     
@@ -34,7 +34,7 @@ def test_scamshield_api():
         }
     ]
     
-    print("🛡️  Testing ScamShield AI")
+    print("� Testing Elephas AI")
     print("=" * 50)
     
     for i, test in enumerate(test_messages, 1):
@@ -88,4 +88,4 @@ def test_scamshield_api():
         print(f"❌ Batch test failed: {e}")
 
 if __name__ == "__main__":
-    test_scamshield_api()
+    test_elephas_ai_api()

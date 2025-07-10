@@ -1,4 +1,4 @@
-# scamshield-ai/main.py
+# elephas-ai/main.py
 
 import asyncio
 import logging
@@ -19,8 +19,8 @@ from api.enhanced_routes import app
 import uvicorn
 
 
-class ScamShieldOrchestrator:
-    """🚨 Main orchestrator for ScamShield AI System 🚨"""
+class ElephasAIOrchestrator:
+    """� Main orchestrator for Elephas AI System �"""
 
     def __init__(self):
         self.logger = self._setup_logging()
@@ -36,15 +36,15 @@ class ScamShieldOrchestrator:
             format='[%(asctime)s] [%(levelname)s] %(name)s: %(message)s',
             handlers=[
                 logging.StreamHandler(sys.stdout),
-                logging.FileHandler("scamshield.log")
+                logging.FileHandler("elephas-ai.log")
             ]
         )
         return logging.getLogger(__name__)
 
     def _initialize_components(self):
-        """Initialize core ScamShield AI modules."""
+        """Initialize core Elephas AI modules."""
         try:
-            self.logger.info("🧠 Initializing ScamShield components...")
+            self.logger.info("🐘 Initializing Elephas AI components...")
 
             self.components['bert_classifier'] = BertScamClassifier()
             self.components['feature_extractor'] = AdvancedScamFeatureExtractor()
@@ -53,7 +53,7 @@ class ScamShieldOrchestrator:
             self.components['android_integration'] = AndroidIntegration(scam_detector=self)
             self.components['mobile_optimizer'] = MobileModelOptimizer(model_path="scambert-model-v2")
 
-            self.logger.info("✅ ScamShield components initialized.")
+            self.logger.info("✅ Elephas AI components initialized.")
         except Exception as e:
             self.logger.error(f"❌ Initialization error: {e}")
             raise
@@ -95,9 +95,9 @@ class ScamShieldOrchestrator:
             }
 
     async def start(self, mode: str = "full"):
-        """Start ScamShield in the selected mode."""
+        """Start Elephas AI in the selected mode."""
         self.running = True
-        self.logger.info(f"🚀 Starting ScamShield in `{mode}` mode...")
+        self.logger.info(f"🚀 Starting Elephas AI in `{mode}` mode...")
 
         # Graceful shutdown on signals
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -137,7 +137,7 @@ class ScamShieldOrchestrator:
         await asyncio.gather(*tasks)
 
     async def _start_full_mode(self):
-        """Start full ScamShield system including API and mobile integrations."""
+        """Start full Elephas AI system including API and mobile integrations."""
         self.logger.info("🧩 Starting full system with real-time monitoring + API...")
 
         await self._optimize_for_mobile()
@@ -163,12 +163,12 @@ class ScamShieldOrchestrator:
 
     async def shutdown(self):
         """Graceful shutdown of components."""
-        self.logger.info("🛑 Shutting down ScamShield system...")
+        self.logger.info("🛑 Shutting down Elephas AI system...")
         self.running = False
         # Implement cleanup logic if needed
         self.logger.info("✅ Shutdown complete.")
 
 
 if __name__ == "__main__":
-    orchestrator = ScamShieldOrchestrator()
+    orchestrator = ElephasAIOrchestrator()
     asyncio.run(orchestrator.start(mode="full"))  # Change mode if needed

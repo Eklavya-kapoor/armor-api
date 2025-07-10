@@ -1,5 +1,4 @@
-
-# scamshield/core/enhanced_scorer.py
+# elephas-ai/core/enhanced_scorer.py
 from typing import Dict, List, Tuple
 import numpy as np
 import logging
@@ -39,13 +38,18 @@ class EnhancedScamRiskScorer:
             'sentence_count': -0.05,
         }
     
-    def score(self, text: str, features: Dict, sender: str = "") -> Tuple[float, str, Dict]:
+    def score(self, text: str, features: Dict, sender: str = "", handle_mixed_language: bool = False) -> Tuple[float, str, Dict]:
         """
         Calculate comprehensive risk score using ensemble method
         Returns: (risk_score, explanation, detailed_analysis)
         """
         # Get BERT prediction
         bert_score, bert_confidence = self.bert_classifier.predict(text)
+        
+        # Adjust for mixed language if needed
+        if handle_mixed_language:
+            # Increase reliance on rule-based detection for mixed language
+            bert_score = self._adjust_for_mixed_language(bert_score, text, features)
         
         # Calculate rule-based score
         rule_score, rule_explanation = self._calculate_rule_score(features)
@@ -74,6 +78,28 @@ class EnhancedScamRiskScorer:
         
         return final_score, explanation, detailed_analysis
     
+    def _adjust_for_mixed_language(self, bert_score: float, text: str, features: Dict) -> float:
+        """Adjust BERT score for mixed language scenarios"""
+        # If mixed language patterns detected, increase reliance on rule-based features
+        mixed_language_patterns = features.get('mixed_language_patterns', 0)
+        
+        if mixed_language_patterns > 0:
+            # Reduce BERT confidence for mixed language, increase rule-based weight
+            adjustment_factor = min(mixed_language_patterns * 0.1, 0.3)
+            adjusted_score = bert_score * (1 - adjustment_factor)
+            
+            # Compensate with rule-based indicators
+            if features.get('suspicious_url_count', 0) > 0:
+                adjusted_score += 0.2
+            if features.get('personal_keywords', 0) > 0:
+                adjusted_score += 0.15
+            if features.get('urgency_keywords', 0) > 0:
+                adjusted_score += 0.1
+                
+            return min(adjusted_score, 1.0)
+        
+        return bert_score
+
     def _calculate_rule_score(self, features: Dict) -> Tuple[float, List[str]]:
         """Calculate rule-based risk score"""
         score = 0.0

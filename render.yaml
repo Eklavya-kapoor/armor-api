@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: elephas-ai-api
+    runtime: python
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    domains:
+      - elephas-ai-api.onrender.com
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: MODEL_PATH
+        value: ./scambert-model-v2
+      - key: LOG_LEVEL
+        value: INFO
+      - key: API_TITLE
+        value: Elephas AI Security API
+      - key: API_VERSION
+        value: v2.0
+      - key: API_DESCRIPTION
+        value: Advanced AI-powered threat detection and security analysis
+    disk:
+      name: elephas-ai-disk
+      mountPath: /opt/render/project/data
+      sizeGB: 1
