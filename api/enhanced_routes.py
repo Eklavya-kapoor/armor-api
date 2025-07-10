@@ -200,6 +200,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Background AI initialization
+@app.on_event("startup")
+async def startup_event():
+    """Initialize AI components in the background on startup"""
+    import threading
+    
+    def background_init():
+        logger.info("🚀 Starting background AI initialization...")
+        try:
+            initialize_ai_components()
+            if AI_COMPONENTS['initialized']:
+                logger.info("✅ Background AI initialization completed successfully")
+            else:
+                logger.warning("⚠️ Background AI initialization failed - falling back to rule-based detection")
+        except Exception as e:
+            logger.error(f"❌ Background AI initialization error: {e}")
+    
+    # Start initialization in a separate thread so it doesn't block startup
+    thread = threading.Thread(target=background_init, daemon=True)
+    thread.start()
+    logger.info("🔄 AI initialization started in background")
+
 # 🏠 Serve dashboard static files
 dashboard_path = os.path.join(os.path.dirname(__file__), "..", "dashboard")
 # Try multiple possible dashboard paths for different deployment environments
@@ -299,6 +321,22 @@ async def health():
         "environment": os.getenv("ENVIRONMENT", "development"),
         "database": "optional",
         "cache": "optional"
+    }
+
+# 🤖 AI Status endpoint
+@app.get("/ai-status")
+async def ai_status():
+    """Check the status of AI components"""
+    return {
+        "ai_initialized": AI_COMPONENTS['initialized'],
+        "initialization_failed": AI_COMPONENTS['initialization_failed'],
+        "last_attempt": AI_COMPONENTS['last_attempt'],
+        "bert_classifier_loaded": AI_COMPONENTS['bert_classifier'] is not None,
+        "feature_extractor_loaded": AI_COMPONENTS['feature_extractor'] is not None,
+        "risk_scorer_loaded": AI_COMPONENTS['risk_scorer'] is not None,
+        "hf_token_available": os.getenv("HF_TOKEN") is not None,
+        "mode": "AI-powered" if AI_COMPONENTS['initialized'] else "fallback",
+        "timestamp": datetime.now().isoformat()
     }
 
 # 🧪 Simple test endpoint without AI initialization
@@ -501,18 +539,8 @@ async def scan_message(body: ScanRequest):
                 logger.debug("Using fallback detection - AI initialization permanently failed (upgrade to Premium tier or Google Cloud Run needed)")
                 return await _fallback_scan(message, sender, start_time)
             
-            logger.warning("AI components not initialized, attempting to reinitialize...")
-            try:
-                # Try to initialize with a shorter timeout for subsequent attempts
-                initialize_ai_components()
-            except Exception as init_error:
-                logger.error(f"AI initialization failed: {init_error}")
-                # Immediately fall back to rule-based detection
-                return await _fallback_scan(message, sender, start_time)
-            
-        if not AI_COMPONENTS['initialized']:
-            # If still not initialized, use fallback immediately
-            logger.info("Using fallback detection due to AI initialization failure")
+            # Don't block the request - immediately use fallback
+            logger.info("AI components not yet initialized - using fallback detection")
             return await _fallback_scan(message, sender, start_time)
 
         try:
