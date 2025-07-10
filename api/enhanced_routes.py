@@ -114,37 +114,15 @@ def initialize_ai_components():
             AI_COMPONENTS['initialization_failed'] = True
             raise Exception("Missing HF_TOKEN for private model access")
         
-        # Add timeout protection using threading
-        import threading
+        # Initialize components directly in main thread (avoid signal issues)
+        logger.info("🔧 Initializing BERT classifier (main thread)...")
+        AI_COMPONENTS['bert_classifier'] = BertScamClassifier()
         
-        result = {'success': False, 'error': None}
+        logger.info("🔧 Initializing feature extractor...")
+        AI_COMPONENTS['feature_extractor'] = AdvancedScamFeatureExtractor()
         
-        def init_components():
-            try:
-                AI_COMPONENTS['bert_classifier'] = BertScamClassifier()
-                AI_COMPONENTS['feature_extractor'] = AdvancedScamFeatureExtractor()
-                AI_COMPONENTS['risk_scorer'] = EnhancedScamRiskScorer(AI_COMPONENTS['bert_classifier'])
-                result['success'] = True
-            except Exception as e:
-                result['error'] = str(e)
-        
-        # Run initialization in a separate thread with timeout
-        thread = threading.Thread(target=init_components)
-        thread.daemon = True
-        thread.start()
-        thread.join(timeout=180)  # 3 minute timeout
-        
-        if thread.is_alive():
-            logger.error("❌ AI initialization timed out after 3 minutes")
-            logger.error("💾 Likely cause: Model too large for 512MB free tier")
-            logger.error("💡 Solution: Upgrade to Render Premium or use Google Cloud Run")
-            AI_COMPONENTS['initialization_failed'] = True
-            raise Exception("AI initialization timeout - upgrade to Premium or use Google Cloud Run")
-        
-        if not result['success']:
-            logger.error(f"❌ AI initialization failed: {result['error']}")
-            AI_COMPONENTS['initialization_failed'] = True
-            raise Exception(f"AI initialization failed: {result['error']}")
+        logger.info("🔧 Initializing risk scorer...")
+        AI_COMPONENTS['risk_scorer'] = EnhancedScamRiskScorer(AI_COMPONENTS['bert_classifier'])
         
         AI_COMPONENTS['initialized'] = True
         logger.info("✅ Elephas AI components initialized successfully")
@@ -254,24 +232,18 @@ app.include_router(enterprise_router)
 # Background AI initialization
 @app.on_event("startup")
 async def startup_event():
-    """Initialize AI components in the background on startup"""
-    import threading
-    
-    def background_init():
-        logger.info("🚀 Starting background AI initialization...")
-        try:
-            initialize_ai_components()
-            if AI_COMPONENTS['initialized']:
-                logger.info("✅ Background AI initialization completed successfully")
-            else:
-                logger.warning("⚠️ Background AI initialization failed - falling back to rule-based detection")
-        except Exception as e:
-            logger.error(f"❌ Background AI initialization error: {e}")
-    
-    # Start initialization in a separate thread so it doesn't block startup
-    thread = threading.Thread(target=background_init, daemon=True)
-    thread.start()
-    logger.info("🔄 AI initialization started in background")
+    """Initialize AI components synchronously on startup (main thread)"""
+    logger.info("🚀 Starting AI initialization in main thread...")
+    try:
+        # Initialize components in main thread to avoid signal handling issues
+        initialize_ai_components()
+        if AI_COMPONENTS['initialized']:
+            logger.info("✅ AI initialization completed successfully")
+        else:
+            logger.warning("⚠️ AI initialization failed - falling back to rule-based detection")
+    except Exception as e:
+        logger.error(f"❌ AI initialization error: {e}")
+        logger.warning("⚠️ Using fallback detection methods")
 
 # 🏠 Serve dashboard static files from SDK folder
 dashboard_path = os.path.join(os.path.dirname(__file__), "..", "..", "elephas-ai-sdk", "dashboard")

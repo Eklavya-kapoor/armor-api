@@ -39,14 +39,9 @@ class BertScamClassifier:
                 return
             
             print(f"📦 Loading tokenizer from {self.model_path}...")
-            # Add timeout to prevent hanging
-            import signal
-            def timeout_handler(signum, frame):
-                raise TimeoutError("Model loading timed out")
             
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(120)  # 2 minute timeout
-            
+            # Remove signal-based timeout (causes issues in background threads)
+            # Instead, rely on transformers library's own timeout mechanisms
             try:
                 self.tokenizer = BertTokenizer.from_pretrained(
                     self.model_path,
@@ -68,10 +63,9 @@ class BertScamClassifier:
                 self.model.to(self.device)
                 self.model.eval()
                 
-                signal.alarm(0)  # Cancel timeout
-            except TimeoutError:
-                signal.alarm(0)
-                print("⏰ Model loading timed out, using fallback...")
+            except Exception as loading_error:
+                print(f"⚠️ Model loading failed: {loading_error}")
+                print("🔄 Using fallback model...")
                 self._load_fallback_model()
                 return
             
@@ -84,11 +78,21 @@ class BertScamClassifier:
             
         except Exception as e:
             print(f"❌ Failed to load private model: {e}")
+            
+            # In production, don't allow fallback to public models for security
+            if os.getenv("ENVIRONMENT") == "production" and os.getenv("FORCE_PRIVATE_MODEL") == "true":
+                print("🚫 Production mode: No fallback allowed, only private model permitted")
+                raise Exception(f"Production deployment requires private model: {e}")
+            
             print("🔄 Falling back to public model...")
             self._load_fallback_model()
 
     def _load_fallback_model(self):
         """Load a public model as fallback when private model fails"""
+        # In production, prevent fallback if configured to force private model
+        if os.getenv("ENVIRONMENT") == "production" and os.getenv("FORCE_PRIVATE_MODEL") == "true":
+            raise Exception("Production deployment configured to only use private model")
+        
         try:
             # Use a fine-tuned model for better scam detection
             fallback_model = "unitary/toxic-bert"  # Pre-trained for toxic/harmful content
