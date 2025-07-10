@@ -39,20 +39,10 @@ AI_COMPONENTS = {
 }
 
 def initialize_ai_components():
-    """Initialize the AI components for scam detection with timeout protection"""
+    """Initialize the AI components for scam detection with better error handling"""
     global AI_COMPONENTS
     if AI_COMPONENTS['initialized']:
         return
-    
-    import signal
-    import threading
-    
-    def timeout_handler(signum, frame):
-        raise TimeoutError("AI initialization timed out")
-    
-    # Set a 60-second timeout for initialization
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(60)
     
     try:
         logger.info("🐘 Initializing Elephas AI components...")
@@ -63,17 +53,40 @@ def initialize_ai_components():
             logger.error("❌ HF_TOKEN not found - cannot load private model")
             raise Exception("Missing HF_TOKEN for private model access")
         
-        # Initialize components with timeout protection
-        AI_COMPONENTS['bert_classifier'] = BertScamClassifier()
-        AI_COMPONENTS['feature_extractor'] = AdvancedScamFeatureExtractor()
-        AI_COMPONENTS['risk_scorer'] = EnhancedScamRiskScorer(AI_COMPONENTS['bert_classifier'])
+        # Add timeout protection using threading
+        import threading
+        import time
+        
+        result = {'success': False, 'error': None}
+        
+        def init_components():
+            try:
+                AI_COMPONENTS['bert_classifier'] = BertScamClassifier()
+                AI_COMPONENTS['feature_extractor'] = AdvancedScamFeatureExtractor()
+                AI_COMPONENTS['risk_scorer'] = EnhancedScamRiskScorer(AI_COMPONENTS['bert_classifier'])
+                result['success'] = True
+            except Exception as e:
+                result['error'] = str(e)
+        
+        # Run initialization in a separate thread with timeout
+        thread = threading.Thread(target=init_components)
+        thread.daemon = True
+        thread.start()
+        thread.join(timeout=180)  # 3 minute timeout
+        
+        if thread.is_alive():
+            logger.error("❌ AI initialization timed out after 3 minutes")
+            raise Exception("AI initialization timeout - likely memory issues on free tier")
+        
+        if not result['success']:
+            raise Exception(f"AI initialization failed: {result['error']}")
+        
         AI_COMPONENTS['initialized'] = True
-        signal.alarm(0)  # Cancel timeout
         logger.info("✅ Elephas AI components initialized successfully")
-    except (Exception, TimeoutError) as e:
-        signal.alarm(0)  # Cancel timeout
+        
+    except Exception as e:
         logger.error(f"❌ Failed to initialize AI components: {e}")
-        logger.info("🔄 Falling back to rule-based detection only")
+        logger.info("🔄 Will use fallback detection")
         AI_COMPONENTS['initialized'] = False
 
 # Don't initialize components on module load to avoid blocking server startup
