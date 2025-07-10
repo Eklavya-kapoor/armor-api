@@ -1,0 +1,20 @@
+# Railway deployment configuration
+# File: railway.toml
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+
+[environments.production.variables]
+ENVIRONMENT = "production"
+MODEL_PATH = "elephasai/elephas"
+LOG_LEVEL = "INFO"
+PORT = "8000"
+PYTHONPATH = "/app"
+# Set HF_TOKEN in Railway dashboard
+
+[environments.production.volumes]

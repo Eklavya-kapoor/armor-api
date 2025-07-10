@@ -39,20 +39,41 @@ AI_COMPONENTS = {
 }
 
 def initialize_ai_components():
-    """Initialize the AI components for scam detection"""
+    """Initialize the AI components for scam detection with timeout protection"""
     global AI_COMPONENTS
     if AI_COMPONENTS['initialized']:
         return
     
+    import signal
+    import threading
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("AI initialization timed out")
+    
+    # Set a 60-second timeout for initialization
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(60)
+    
     try:
         logger.info("🐘 Initializing Elephas AI components...")
+        
+        # Check if HF_TOKEN is available
+        hf_token = os.getenv("HF_TOKEN")
+        if not hf_token:
+            logger.error("❌ HF_TOKEN not found - cannot load private model")
+            raise Exception("Missing HF_TOKEN for private model access")
+        
+        # Initialize components with timeout protection
         AI_COMPONENTS['bert_classifier'] = BertScamClassifier()
         AI_COMPONENTS['feature_extractor'] = AdvancedScamFeatureExtractor()
         AI_COMPONENTS['risk_scorer'] = EnhancedScamRiskScorer(AI_COMPONENTS['bert_classifier'])
         AI_COMPONENTS['initialized'] = True
+        signal.alarm(0)  # Cancel timeout
         logger.info("✅ Elephas AI components initialized successfully")
-    except Exception as e:
+    except (Exception, TimeoutError) as e:
+        signal.alarm(0)  # Cancel timeout
         logger.error(f"❌ Failed to initialize AI components: {e}")
+        logger.info("🔄 Falling back to rule-based detection only")
         AI_COMPONENTS['initialized'] = False
 
 # Don't initialize components on module load to avoid blocking server startup
@@ -399,10 +420,17 @@ async def scan_message(body: ScanRequest):
         # Check if AI components are initialized
         if not AI_COMPONENTS['initialized']:
             logger.warning("AI components not initialized, attempting to reinitialize...")
-            initialize_ai_components()
+            try:
+                # Try to initialize with a shorter timeout for subsequent attempts
+                initialize_ai_components()
+            except Exception as init_error:
+                logger.error(f"AI initialization failed: {init_error}")
+                # Immediately fall back to rule-based detection
+                return await _fallback_scan(message, sender, start_time)
             
         if not AI_COMPONENTS['initialized']:
-            # Fallback to basic rule-based detection
+            # If still not initialized, use fallback immediately
+            logger.info("Using fallback detection due to AI initialization failure")
             return await _fallback_scan(message, sender, start_time)
 
         try:
